@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Airport Rush</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #2d6a3a; touch-action: none; overscroll-behavior: none; font-family: 'Fredoka', 'Trebuchet MS', system-ui, sans-serif; }
+#stage { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: 0 0; background: #4e9a4a; overflow: hidden; }
+canvas { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; touch-action: none; display: block; }
+button { font-family: inherit; cursor: pointer; border: 0; }
+
+/* overlays */
+.ov { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; color: #fff; text-align: center; animation: fade .25s both; }
+.ov.hidden { display: none; }
+.ov.mdim { background: radial-gradient(ellipse at center, rgba(14,40,60,.55), rgba(14,40,60,.15)); }
+.ov.dim { background: rgba(14, 40, 30, .55); }
+@keyframes fade { from { opacity: 0; } }
+.logo { font-weight: 700; font-size: 104px; line-height: .9; color: #fff; letter-spacing: 1px; text-shadow: 0 6px 0 #1d5fae, 0 10px 22px rgba(0,0,0,.35); transform: rotate(-3deg); }
+.logo span { color: #ffb02e; text-shadow: 0 6px 0 #b8620a, 0 10px 22px rgba(0,0,0,.35); }
+.btn { min-width: 270px; padding: 15px 34px; border-radius: 18px; font-size: 32px; font-weight: 700; color: #fff; background: #2f8cf0; box-shadow: 0 7px 0 #1d5fae, 0 12px 20px rgba(0,0,0,.25); transition: transform .08s; }
+.btn:active { transform: translateY(5px); box-shadow: 0 2px 0 #1d5fae; }
+.btn.o { background: #ff9d1c; box-shadow: 0 7px 0 #c46a00, 0 12px 20px rgba(0,0,0,.25); }
+.btn.o:active { box-shadow: 0 2px 0 #c46a00; }
+.btn.g { background: #3cc16b; box-shadow: 0 7px 0 #1f8a45, 0 12px 20px rgba(0,0,0,.25); }
+.btn.s { min-width: 0; font-size: 24px; padding: 10px 26px; }
+.sub { font-size: 24px; font-weight: 600; text-shadow: 0 2px 0 rgba(0,0,0,.3); }
+.panel { background: #fff; color: #24445e; border-radius: 26px; padding: 26px 38px 30px; box-shadow: 0 10px 0 rgba(0,0,0,.2), 0 20px 40px rgba(0,0,0,.3); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.panel h2 { font-size: 46px; color: #1d5fae; }
+.tips { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; max-width: 520px; text-align: left; }
+.tips li { display: flex; gap: 14px; align-items: flex-start; font-size: 22px; font-weight: 600; line-height: 1.2; }
+.tips b { flex: none; width: 36px; height: 36px; border-radius: 50%; background: #ff9d1c; color: #fff; display: grid; place-items: center; font-size: 22px; box-shadow: 0 3px 0 #c46a00; }
+.panel .stars { font-size: 64px; letter-spacing: 8px; color: #ffc21a; text-shadow: 0 4px 0 #c88a00; }
+.panel .stars i { color: #cfd9e4; text-shadow: none; font-style: normal; }
+.panel p { font-size: 25px; font-weight: 600; }
+#levels { display: grid; grid-template-columns: repeat(3, 150px); gap: 16px; }
+.lv { height: 118px; border-radius: 18px; background: #2f8cf0; color: #fff; font-size: 46px; font-weight: 700; box-shadow: 0 6px 0 #1d5fae; position: relative; }
+.lv:active { transform: translateY(4px); box-shadow: 0 2px 0 #1d5fae; }
+.lv small { display: block; font-size: 26px; color: #ffd24a; letter-spacing: 3px; margin-top: -6px; text-shadow: 0 2px 0 #1d5fae; }
+.lv small i { color: rgba(255,255,255,.35); font-style: normal; }
+.lv.lock { background: #9fb3c6; box-shadow: 0 6px 0 #7a8da0; pointer-events: none; }
+.lv.lock::after { content: ''; position: absolute; left: 50%; top: 56%; width: 30px; height: 22px; margin-left: -15px; background: #51657a; border-radius: 5px; }
+.lv.lock::before { content: ''; position: absolute; left: 50%; top: 28%; width: 18px; height: 20px; margin-left: -9px; border: 5px solid #51657a; border-bottom: 0; border-radius: 12px 12px 0 0; }
+#pauseBtn { position: absolute; left: 14px; top: 12px; width: 58px; height: 58px; border-radius: 16px; background: #ff9d1c; box-shadow: 0 5px 0 #c46a00; display: none; }
+#pauseBtn::before, #pauseBtn::after { content: ''; position: absolute; top: 16px; width: 9px; height: 26px; background: #fff; border-radius: 3px; }
+#pauseBtn::before { left: 16px; } #pauseBtn::after { right: 16px; }
+#pauseBtn:active { transform: translateY(4px); box-shadow: 0 1px 0 #c46a00; }
+.pt { position: absolute; width: 100%; text-align: center; top: 232px; font-size: 54px; font-weight: 700; color: #fff; text-shadow: 0 5px 0 rgba(0,0,0,.35); pointer-events: none; opacity: 0; }
+.pt.show { animation: pt 1.6s both; }
+@keyframes pt { 0% { opacity: 0; transform: scale(.6); } 15% { opacity: 1; transform: scale(1.08); } 25% { transform: scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translateY(-24px); } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <button id="pauseBtn" aria-label="Pause"></button>
+  <div class="pt" id="toast"></div>
+
+  <div class="ov mdim" id="menu">
+    <div class="logo">AIRPORT<br><span>RUSH</span></div>
+    <button class="btn g" id="bResumeRun">RESUME</button>
+    <button class="btn o" id="bPlay">PLAY</button>
+    <button class="btn" id="bSurv">SURVIVAL</button>
+    <div class="sub" id="menuStat"></div>
+  </div>
+
+  <div class="ov dim hidden" id="lvlScreen">
+    <div class="panel">
+      <h2 id="lvlT">Pick a level</h2>
+      <div id="levels"></div>
+      <button class="btn s" id="bLvlBack">BACK</button>
+    </div>
+  </div>
+
+  <div class="ov dim hidden" id="intro">
+    <div class="panel">
+      <h2 id="introT">Level 1</h2>
+      <p id="introP"></p>
+      <p style="font-size:21px;color:#5a7a92">Drag from a plane to draw its route.</p>
+      <button class="btn g" id="bStart">START</button>
+    </div>
+  </div>
+
+  <div class="ov dim hidden" id="tutScr">
+    <div class="panel tut">
+      <h2>How to play</h2>
+      <ol class="tips">
+        <li><b>1</b><span>Draw a line from a plane to the building it needs. The badges above it show the order. Then draw it to the take-off runway.</span></li>
+        <li><b>2</b><span>Keep lines on the grey ground. Planes can't cross the grass.</span></li>
+        <li><b>3</b><span>Tap a moving plane to pause it. Tap again to go.</span></li>
+        <li><b>4</b><span>Every plane you send off earns an upgrade. Tap the glowing arrow on a building to speed it up.</span></li>
+        <li><b>5</b><span>Planes that crash or wait too long cost you a heart.</span></li>
+      </ol>
+      <button class="btn g" id="bTutGo">GOT IT</button>
+    </div>
+  </div>
+
+  <div class="ov dim hidden" id="pauseScr">
+    <div class="panel">
+      <h2>Paused</h2>
+      <button class="btn g" id="bResume">RESUME</button>
+      <button class="btn o s" id="bRestart">RESTART</button>
+      <button class="btn s" id="bQuit">MENU</button>
+    </div>
+  </div>
+
+  <div class="ov dim hidden" id="end">
+    <div class="panel">
+      <h2 id="endT">Level clear!</h2>
+      <div class="stars" id="endStars"></div>
+      <p id="endP"></p>
+      <button class="btn g" id="bNext">NEXT LEVEL</button>
+      <button class="btn o s" id="bRetry">PLAY AGAIN</button>
+      <button class="btn s" id="bEndMenu">MENU</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= CONSTANTS ================= */
+const W = 1280, H = 720;
+const TAXI = 135, ROLL_V = 260, TAKEOFF_ACC = 230, PICK_R = 58, SNAP_R = 56, HIT_R = 24;
+const PATIENCE_S = 26;             // seconds a plane will wait around before it gives up
+const SERVICE_T = { pax: 2.6, fuel: 2.8, fix: 3.4 };
+const MAX_LIVES = 3;
+// Buildings start slow. Each plane you send off earns one upgrade; tap a building to use it. Two upgrades per building.
+const UP_MAX = 2, UP_SPEED = [2.1, 1.45, 1];
+const svcTime = k => SERVICE_T[k] * UP_SPEED[terms[k].lvl || 0];
+// A look for every level: ground colours, trees, apron and runway
+const THEMES = [
+  { name: 'Meadow',   bg: '#58a24d', field: '#4f9645', blob: '#63ae56', stripe: .035, dots: ['rgba(255,255,255,.55)', 'rgba(255,224,102,.6)'], tree: 'round',   td: '#2f7d3a', tl: '#3d9a47', ap: ['#3b4756', '#8793a1', '#748090'], rw: ['#2f3947', '#4a5666'], btn: ['#2f8cf0', '#1d5fae'] },
+  { name: 'Autumn',   bg: '#b0953f', field: '#a38a36', blob: '#bda34c', stripe: .04,  dots: ['rgba(255,140,60,.75)', 'rgba(200,60,40,.7)'],    tree: 'round',   td: '#c2511f', tl: '#ec8a2c', ap: ['#4a4038', '#8f8a86', '#7b7673'], rw: ['#35302d', '#524b46'], btn: ['#ec8a2c', '#a85a10'] },
+  { name: 'Desert',   bg: '#e3c283', field: '#d9b56f', blob: '#ecd197', stripe: .07,  dots: ['rgba(150,110,60,.5)', 'rgba(255,255,255,.4)'],   tree: 'cactus',  td: '#3f8f4a', tl: '#5cb264', ap: ['#5a4a3a', '#a89a88', '#948676'], rw: ['#3a3028', '#5a4c40'], btn: ['#e0a23a', '#9a6a14'] },
+  { name: 'Snow',     bg: '#e6f0f7', field: '#d9e6f1', blob: '#f6fbff', stripe: .05,  dots: ['rgba(150,190,230,.8)', 'rgba(255,255,255,.95)'], tree: 'pine',    td: '#2f6b57', tl: '#4a8f74', ap: ['#475569', '#97a6b8', '#8696aa'], rw: ['#2b3442', '#46546a'], btn: ['#5bb8e8', '#2a7fb0'], flakes: true },
+  { name: 'Beach',    bg: '#f2e2a8', field: '#ead79a', blob: '#f8ecbc', stripe: .06,  dots: ['rgba(255,150,150,.7)', 'rgba(255,255,255,.8)'],  tree: 'palm',    td: '#2f9a55', tl: '#55c27a', ap: ['#566170', '#a3abb5', '#8e97a2'], rw: ['#323b48', '#4f5a69'], btn: ['#25b7b0', '#12807a'], ponds: true },
+  { name: 'Night',    bg: '#244a42', field: '#1f3f38', blob: '#2c5a4f', stripe: .025, dots: ['rgba(255,240,150,.9)', 'rgba(190,255,200,.7)'],  tree: 'round',   td: '#133029', tl: '#1f4d43', ap: ['#1c2430', '#566377', '#485467'], rw: ['#151b25', '#2c3646'], btn: ['#4b5fd0', '#2e3a96'], night: true },
+  { name: 'Blossom',  bg: '#e6a3b8', field: '#dd93ab', blob: '#f0b8cb', stripe: .05,  dots: ['rgba(255,255,255,.85)', 'rgba(255,214,102,.75)'], tree: 'round',   td: '#d6578a', tl: '#f58fb4', ap: ['#4a4358', '#9a93a8', '#868096'], rw: ['#3a3446', '#55505f'], btn: ['#ec6fa0', '#a83a6a'] },
+  { name: 'Mars',     bg: '#b5593a', field: '#a64e32', blob: '#c46a46', stripe: .04,  dots: ['rgba(60,20,10,.35)', 'rgba(255,200,160,.35)'],   tree: 'rock',    td: '#7a3a28', tl: '#9a4e36', ap: ['#3f3536', '#8a7f80', '#766c6e'], rw: ['#3a2a2a', '#5a4545'], btn: ['#d9553a', '#963020'] },
+  { name: 'Lavender', bg: '#8f7bc0', field: '#8470b6', blob: '#a28dd0', stripe: .05,  dots: ['rgba(255,255,255,.65)', 'rgba(255,180,255,.65)'], tree: 'round',   td: '#3f7a5c', tl: '#5aa07c', ap: ['#3d3656', '#948daa', '#807a98'], rw: ['#2e2944', '#4a4564'], btn: ['#8f6fe0', '#5a3fa8'] }
+];
+let THEME = THEMES[0];
+
+const APRON = { x: 250, y: 130, w: 690, h: 460 };
+const LAND_Y = 215, TAKE_Y = 505, TAKE_IN = { x: 938, y: TAKE_Y }, LAND_STOP = 905, TOUCH_X = 1160;
+const TERMS = {
+  fuel: { name: 'FUEL', col: '#ff9d1c', dark: '#c46a00', rect: { x: 470, y: 18, w: 240, h: 112 }, inn: { x: 508, y: 134 }, out: { x: 672, y: 134 }, dock: { x: 508, y: 82 }, dir: { x: 0, y: 1 } },
+  pax:  { name: 'PASSENGERS', col: '#35a8e8', dark: '#1a6fa6', rect: { x: 470, y: 590, w: 240, h: 112 }, inn: { x: 508, y: 586 }, out: { x: 672, y: 586 }, dock: { x: 508, y: 640 }, dir: { x: 0, y: -1 } },
+  fix:  { name: 'REPAIR', col: '#52c455', dark: '#2a8a2e', rect: { x: 130, y: 240, w: 120, h: 240 }, inn: { x: 254, y: 290 }, out: { x: 254, y: 430 }, dock: { x: 196, y: 290 }, dir: { x: 1, y: 0 } }
+};
+const SVC = ['pax', 'fuel', 'fix'];
+
+const LEVELS = [
+  { goal: 5,  every: 10,  svc: ['pax', 'fuel'],          maxNeed: 1, theme: 0 },
+  { goal: 7,  every: 9,   svc: ['pax', 'fuel', 'fix'],   maxNeed: 1, theme: 1 },
+  { goal: 9,  every: 8.5, svc: ['pax', 'fuel', 'fix'],   maxNeed: 2, theme: 2 },
+  { goal: 12, every: 8,   svc: ['pax', 'fuel', 'fix'],   maxNeed: 2, theme: 3 },
+  { goal: 15, every: 7.5, svc: ['pax', 'fuel', 'fix'],   maxNeed: 2, theme: 4 },
+  { goal: 18, every: 7,   svc: ['pax', 'fuel', 'fix'],   maxNeed: 2, theme: 5 },
+  { goal: 22, every: 6.4, svc: ['pax', 'fuel', 'fix'],   maxNeed: 2, theme: 6 },
+  { goal: 26, every: 5.8, svc: ['pax', 'fuel', 'fix'],   maxNeed: 3, theme: 7 },
+  { goal: 30, every: 5.2, svc: ['pax', 'fuel', 'fix'],   maxNeed: 3, theme: 8 }
+];
+// Survival airports: no goal, the run lasts until you run out of hearts. Score X on one unlocks the next.
+const SURV = [
+  { svc: ['pax', 'fuel'],         base: 10,  need: 8, theme: 0 },
+  { svc: ['pax', 'fuel', 'fix'],  base: 9.5, need: 10, theme: 2 },
+  { svc: ['pax', 'fuel', 'fix'],  base: 9,   need: 12, theme: 3 },
+  { svc: ['pax', 'fuel', 'fix'],  base: 8,   need: 14, theme: 4 },
+  { svc: ['pax', 'fuel', 'fix'],  base: 7,   need: 16, theme: 1 },
+  { svc: ['pax', 'fuel', 'fix'],  base: 6,   need: 0, theme: 5 }
+];
+const COLORS = ['#e8453c', '#2f8cf0', '#ffb02e', '#3cc16b', '#a45ee5', '#ff6fa8'];
+
+/* ================= HELPERS ================= */
+const $ = id => document.getElementById(id);
+const rand = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const store = {
+  get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+const angDiff = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+
+/* ================= SOUND ================= */
+let actx = null;
+function beep(f, t = .12, type = 'sine', vol = .12, slide = 0) {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain(), n = actx.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, n); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), n + t);
+    g.gain.setValueAtTime(vol, n); g.gain.exponentialRampToValueAtTime(.0001, n + t);
+    o.connect(g); g.connect(actx.destination); o.start(n); o.stop(n + t + .02);
+  } catch (e) {}
+}
+const sfx = {
+  dock: () => { beep(660, .1); setTimeout(() => beep(880, .14), 90); },
+  done: () => { beep(520, .1, 'triangle'); setTimeout(() => beep(780, .16, 'triangle'), 90); },
+  off:  () => beep(220, .5, 'sawtooth', .05, 500),
+  land: () => beep(150, .18, 'triangle', .1, -60),
+  crash: () => { beep(120, .5, 'sawtooth', .16, -80); beep(70, .6, 'square', .1, -30); },
+  up: () => { beep(520, .08, 'triangle'); setTimeout(() => beep(700, .08, 'triangle'), 70); setTimeout(() => beep(1040, .16, 'triangle'), 140); },
+  oops: () => beep(300, .25, 'square', .06, -120)
+};
+
+/* ================= CANVAS / SCALE ================= */
+const cv = $('cv'), g = cv.getContext('2d'), stage = $('stage');
+let dpr = 1, scale = 1;
+function layout() {
+  scale = Math.min(innerWidth / W, innerHeight / H);
+  stage.style.transform = `scale(${scale}) translate(-50%, -50%)`;
+  dpr = Math.min(window.devicePixelRatio || 1, 2) * Math.max(1, Math.min(scale, 1.5));
+  cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+}
+addEventListener('resize', layout);
+
+/* ================= STATE ================= */
+let scene = 'menu';                  // menu | intro | play | pause | end
+let mode = 'story', levelIdx = 0, cfg = LEVELS[0];
+let qItems = [], qPhase = 0;
+let ups = 0, planes, parts, pops, terms, handled, spawned, pending, lives, elapsed, nextSpawn, shake, uid, hud;
+let prog = { stars: [] };
+try { prog = JSON.parse(store.get('ar-prog', '{"stars":[]}')) || { stars: [] }; } catch (e) {}
+let survScores = [];
+try { survScores = JSON.parse(store.get('ar-surv2', 'null')) || [+store.get('ar-surv', 0) || 0]; } catch (e) { survScores = [0]; }
+let survIdx = 0;
+const survBest = i => survScores[i] || 0;
+const survUnlocked = i => i === 0 || survBest(i - 1) >= SURV[i - 1].need;
+let time = 0;
+const stars = i => (prog.stars[i] || 0);
+const unlocked = i => i === 0 || stars(i - 1) > 0;
+
+function resetGame() {
+  planes = []; parts = []; pops = []; qItems = []; qPhase = 0; handled = 0; spawned = 0; pending = 0; lives = MAX_LIVES; elapsed = 0; nextSpawn = 1.2; shake = 0; uid = 1;
+  terms = {}; for (const k of SVC) terms[k] = { busy: 0, active: cfg.svc.includes(k), lvl: 0 };
+  ups = 0; THEME = THEMES[cfg.theme || 0];
+}
+
+/* ================= PLANES ================= */
+// Planes that have not landed yet circle in a holding line above the landing runway and wait their turn.
+const QT = { cx: 1100, cy: 112, a: 150, b: 40, gap: 112 };
+function queuePos(i) {
+  const th = (qPhase - i * QT.gap) / 105;
+  return { x: QT.cx + QT.a * Math.cos(th), y: QT.cy + QT.b * Math.sin(th), a: Math.atan2(QT.b * Math.cos(th), -QT.a * Math.sin(th)) };
+}
+function syncQueue() {
+  while (qItems.length < pending) qItems.push({ col: COLORS[(Math.random() * COLORS.length) | 0], born: time });
+  while (qItems.length > pending) { qItems.shift(); qPhase -= QT.gap; }
+}
+function newPlane(from) {
+  const pool = cfg.svc;
+  const maxNeed = mode === 'surv' ? (handled > 12 ? 3 : handled > 5 ? 2 : 1) : cfg.maxNeed;
+  // 1 to 3 different stops, picked without repeats, so a plane never visits the same building twice
+  const count = 1 + Math.floor(Math.random() * Math.min(3, maxNeed, pool.length));
+  const need = [...new Set([...pool].sort(() => Math.random() - .5))].slice(0, count);
+  return { id: uid++, x: from ? from.x : W + 70, y: from ? from.y : LAND_Y, a: from ? from.a : Math.PI, v: ROLL_V, st: 'air', alt: 1, col: from ? from.col : COLORS[(Math.random() * COLORS.length) | 0], need, path: [], pi: 0, pat: 1, svcT: 0, svcK: null, dockT: 0, from: null, tgt: null };
+}
+const surface = p => ['roll', 'wait', 'taxi', 'queue', 'takeoff', 'out', 'dock'].includes(p.st) && !(p.st === 'takeoff' && p.alt > .3);
+function runwayClear() {
+  return !planes.some(p => p.st === 'air' || p.st === 'roll' || (surface(p) && p.x > 640 && p.y < 330 && p.st !== 'dock'));
+}
+function stopFor(p) { return p.st === 'wait' || p.st === 'roll' || p.st === 'taxi'; }
+
+function targetsFor(p) {
+  // services come in the order shown on the badges: only the first one left is a valid stop
+  const list = p.need.slice(0, 1).map(k => ({ type: 'gate', k, x: TERMS[k].inn.x, y: TERMS[k].inn.y }));
+  if (!p.need.length) list.push({ type: 'take', x: TAKE_IN.x, y: TAKE_IN.y });
+  return list;
+}
+// Where a plane is allowed to roll: the grey apron (minus the grass island), plus the landing strip. Routes cannot be drawn anywhere else.
+const ISLAND = { x: 560 - 22, y: 300 - 22, w: 90 + 44, h: 90 + 44 };
+function allowed(q) {
+  if (q.x > APRON.x + 12 && q.x < APRON.x + APRON.w - 12 && q.y > APRON.y + 12 && q.y < APRON.y + APRON.h - 12)
+    return !(q.x > ISLAND.x && q.x < ISLAND.x + ISLAND.w && q.y > ISLAND.y && q.y < ISLAND.y + ISLAND.h);
+  return q.x >= APRON.x + APRON.w - 14 && Math.abs(q.y - LAND_Y) < 26;
+}
+function segOK(a, b) {
+  const n = Math.max(1, Math.ceil(dist(a, b) / 6));
+  for (let i = 1; i <= n; i++) if (!allowed({ x: a.x + (b.x - a.x) * i / n, y: a.y + (b.y - a.y) * i / n })) return false;
+  return true;
+}
+// Pull the end of the line toward the finger, but never over grass or the island; it slides along the edge instead.
+function extendDrag(d, pt) {
+  let cur = d.pts[d.pts.length - 1], moved = false;
+  const total = dist(cur, pt), n = Math.ceil(total / 5);
+  for (let i = 0; i < n; i++) {
+    const dx = (pt.x - cur.x) / Math.max(1, n - i), dy = (pt.y - cur.y) / Math.max(1, n - i);
+    let nx = { x: cur.x + dx, y: cur.y + dy };
+    if (!allowed(nx)) {
+      if (allowed({ x: cur.x + dx, y: cur.y })) nx = { x: cur.x + dx, y: cur.y };
+      else if (allowed({ x: cur.x, y: cur.y + dy })) nx = { x: cur.x, y: cur.y + dy };
+      else break;
+    }
+    cur = nx; moved = true;
+    const l = d.pts[d.pts.length - 1];
+    if (dist(cur, l) >= 9) d.pts.push(cur);
+  }
+  return moved;
+}
+function dragUpdate(d, pt) {
+  const sn = zoneTarget(d.plane, pt), last = d.pts[d.pts.length - 1];
+  d.snap = sn && segOK(last, approachOf(sn)) ? sn : null;
+  if (!d.snap) extendDrag(d, pt);
+}
+
+// Where a route ends up when the finger is over a building (or the take-off runway): it locks on and lines itself up with the gate.
+function zoneTarget(p, pt) {
+  let best = null, bd = 1e9;
+  for (const t of targetsFor(p)) {
+    let inside;
+    if (t.type === 'gate') { const r = TERMS[t.k].rect; inside = pt.x > r.x - 64 && pt.x < r.x + r.w + 64 && pt.y > r.y - 64 && pt.y < r.y + r.h + 64; }
+    else inside = pt.x > 850 && Math.abs(pt.y - TAKE_Y) < 76;
+    const d = dist(t, pt);
+    if (inside || d < 110) { if (d < bd) { bd = d; best = t; } }
+  }
+  return best;
+}
+function approachOf(t) {
+  if (t.type === 'gate') { const T = TERMS[t.k]; return { x: t.x + T.dir.x * 46, y: t.y + T.dir.y * 46 }; }   // T.dir points away from the building, so this is the spot just outside the gate
+  return { x: t.x - 46, y: t.y };
+}
+function setPath(p, pts, snap) {
+  if (!pts || pts.length < 2) return false;
+  const last = pts[pts.length - 1];
+  let best = snap || null, bd = 110;
+  if (!best) for (const t of targetsFor(p)) { const d = dist(t, last); if (d < bd && segOK(last, approachOf(t))) { bd = d; best = t; } }
+  let raw = pts.slice();
+  if (best) while (raw.length > 2 && dist(raw[raw.length - 1], best) < 100) raw.pop();   // drop the wobble right next to the gate
+  if (best) raw.push(approachOf(best), { x: best.x, y: best.y });
+  // round off the corners of a shaky finger line (two passes of corner cutting), keeping the start and the gate exact
+  for (let k = 0; k < 2 && raw.length > 3; k++) {
+    const out = [raw[0]];
+    for (let i = 0; i < raw.length - 1; i++) {
+      const a = raw[i], b = raw[i + 1];
+      if (i === raw.length - 2) { out.push(b); break; }
+      out.push({ x: a.x * .75 + b.x * .25, y: a.y * .75 + b.y * .25 }, { x: a.x * .25 + b.x * .75, y: a.y * .25 + b.y * .75 });
+    }
+    raw = out;
+  }
+  const path = raw.slice(1);
+  p.path = path; p.pi = 0; p.tgt = best; p.st = 'taxi'; p.go = false;
+  return true;
+}
+
+function arrive(p) {
+  const t = p.tgt; p.path = []; p.pi = 0; p.tgt = null;
+  if (t && t.type === 'gate') {
+    const T = terms[t.k];
+    if (T.busy && T.busy !== p.id) { p.st = 'wait'; sfx.oops(); return; }
+    T.busy = p.id; p.st = 'dock'; p.dockT = 0; p.svcK = t.k; p.from = { x: p.x, y: p.y };
+    sfx.dock();
+  } else if (t && t.type === 'take') {
+    p.st = 'takeoff'; p.v = Math.max(p.v, 70);
+  } else p.st = 'wait';
+}
+
+function stepPlane(p, dt) {
+  if (p.paused && p.st === 'taxi') { p.v = 0; return; }   // tapped to hold: stays put until tapped again
+  const surf = surface(p);
+  if (p.st === 'air') {
+    const ny = p.y + (LAND_Y - p.y) * Math.min(1, dt * 3.2);
+    p.a = Math.atan2(ny - p.y, -ROLL_V * dt); p.y = ny; p.x -= ROLL_V * dt;
+    if (Math.abs(p.y - LAND_Y) < 3) { p.y = LAND_Y; p.a = Math.PI; }
+    p.alt = clamp((p.x - TOUCH_X) / 150, 0, 1);
+    if (p.x <= TOUCH_X) { p.st = 'roll'; p.alt = 0; p.v = ROLL_V; sfx.land(); }
+  } else if (p.st === 'roll') {
+    // glide to a stop at the end of the runway: v^2 = 2*a*d
+    p.y += (LAND_Y - p.y) * Math.min(1, dt * 8); p.a += angDiff(p.a, Math.PI) * Math.min(1, dt * 8);
+    const left = Math.max(1, p.x - LAND_STOP);
+    p.v = Math.max(0, Math.min(p.v, Math.sqrt(2 * 135 * left)));
+    p.x -= p.v * dt;
+    if (p.x <= LAND_STOP + .5 || p.v < 3) { p.st = 'wait'; p.v = 0; }
+  } else if (p.st === 'taxi') {
+    // turn the nose toward where the line goes (looking a little way ahead), and only roll as fast as the nose is lined up
+    let look = null, acc = 0, lx = p.x, ly = p.y;
+    for (let i = p.pi; i < p.path.length; i++) { acc += Math.hypot(p.path[i].x - lx, p.path[i].y - ly); lx = p.path[i].x; ly = p.path[i].y; look = p.path[i]; if (acc > 34) break; }
+    let off = 0;
+    if (look && Math.hypot(look.x - p.x, look.y - p.y) > 2) {
+      off = angDiff(p.a, Math.atan2(look.y - p.y, look.x - p.x));
+      const maxTurn = 8 * dt;
+      p.a += Math.abs(off) < maxTurn ? off : Math.sign(off) * maxTurn;
+    }
+    const align = clamp(1 - Math.abs(off) / 1.1, 0, 1);
+    p.v += (TAXI * align - p.v) * Math.min(1, dt * 9);
+    let rem = p.v * dt;
+    while (rem > 0 && p.pi < p.path.length) {
+      const q = p.path[p.pi], dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy);
+      if (d <= rem) { p.x = q.x; p.y = q.y; rem -= d; p.pi++; }
+      else { p.x += dx / d * rem; p.y += dy / d * rem; rem = 0; }
+    }
+    // heading for a gate that is busy or has a line: stop in the queue instead of ramming the plane in front
+    if (p.tgt && p.tgt.type === 'gate' && !p.go) {
+      const k = p.tgt.k, nq = planes.filter(q => q !== p && q.st === 'queue' && q.qk === k).length;
+      if ((terms[k].busy || nq > 0) && dist(p, p.tgt) <= 74 + 66 * nq) {
+        p.st = 'queue'; p.qk = k; p.qAt = time; p.path = []; p.pi = 0; p.v = 0;
+      }
+    }
+    if (p.st === 'taxi' && p.pi >= p.path.length) arrive(p);
+  } else if (p.st === 'queue') {
+    // first in line rolls into the building by itself as soon as it is free
+    const T = terms[p.qk];
+    const head = !planes.some(q => q !== p && q.st === 'queue' && q.qk === p.qk && q.qAt < p.qAt);
+    if (!T.busy && head) {
+      const t = { type: 'gate', k: p.qk, x: TERMS[p.qk].inn.x, y: TERMS[p.qk].inn.y };
+      p.path = [approachOf(t), { x: t.x, y: t.y }]; p.pi = 0; p.tgt = t; p.go = true; p.st = 'taxi';
+    }
+  } else if (p.st === 'takeoff') {
+    p.v += TAKEOFF_ACC * dt; p.a += angDiff(p.a, 0) * Math.min(1, dt * 8);
+    p.x += p.v * dt; p.y += (TAKE_Y - p.y) * Math.min(1, dt * 4);
+    p.alt = clamp((p.x - 1130) / 160, 0, 1);
+    if (p.x > W + 80) { p.st = 'gone'; planeDone(p); }
+  } else if (p.st === 'dock') {
+    const T = TERMS[p.svcK]; p.dockT += dt;
+    const k = clamp(p.dockT / .8, 0, 1), e = k * k * (3 - 2 * k);
+    p.x = p.from.x + (T.dock.x - p.from.x) * e; p.y = p.from.y + (T.dock.y - p.from.y) * e;
+    p.a += angDiff(p.a, Math.atan2(-T.dir.y, -T.dir.x) + Math.PI) * Math.min(1, dt * 10);   // nose into the terminal
+    if (k >= 1) { p.st = 'service'; p.svcDur = svcTime(p.svcK); p.svcT = p.svcDur; }
+  } else if (p.st === 'service') {
+    p.svcT -= dt;
+    if (p.svcT <= 0) {
+      const T = TERMS[p.svcK], term = terms[p.svcK];
+      p.need = p.need.filter(k => k !== p.svcK); term.busy = 0;
+      p.st = 'out'; p.x = T.out.x - T.dir.x * 0; p.y = T.out.y; p.a = Math.atan2(T.dir.y, T.dir.x); p.v = 90; p.outD = 0;
+      p.pat = Math.min(1, p.pat + .35);
+      sfx.done(); pop(p.x, p.y - 30, 'Done!', '#fff');
+    }
+  } else if (p.st === 'out') {
+    const T = TERMS[p.svcK], d = 90 * dt; p.x += T.dir.x * d; p.y += T.dir.y * d; p.outD += d;
+    if (p.outD >= 46) { p.st = 'wait'; p.v = 0; }
+  }
+  // patience drains while a plane stands around on the ground
+  if (p.st === 'wait' || p.st === 'queue') {
+    p.pat -= dt / PATIENCE_S * (p.st === 'queue' ? .45 : 1);
+    if (p.pat <= 0) { p.st = 'gone'; loseLife(p.x, p.y, 'Left angry!'); }
+  }
+}
+
+const upsLeft = () => SVC.reduce((n, k) => n + (terms[k].active ? UP_MAX - (terms[k].lvl || 0) : 0), 0);
+function upgradeAt(pt) {
+  if (ups <= 0) return false;
+  for (const k of SVC) {
+    const T = TERMS[k], r = T.rect, t = terms[k];
+    if (!t.active || (t.lvl || 0) >= UP_MAX) continue;
+    if (pt.x > r.x - 8 && pt.x < r.x + r.w + 8 && pt.y > r.y - 8 && pt.y < r.y + r.h + 8) {
+      t.lvl = (t.lvl || 0) + 1; ups--; sfx.up();
+      pop(r.x + r.w / 2, k === 'pax' ? r.y - 34 : k === 'fuel' ? r.y + r.h + 52 : r.y + r.h + 26, t.lvl >= UP_MAX ? 'MAX speed!' : 'Faster!', '#7dffa0');
+      return true;
+    }
+  }
+  return false;
+}
+function planeDone(p) {
+  handled++; pop(Math.min(W - 80, p.x), p.y - 40, '+1', '#ffd24a'); sfx.off();
+  if (upsLeft() > ups) { ups++; pop(190, 96, 'Upgrade ready!', '#7dffa0'); }
+  if (mode === 'surv') nextSpawn = Math.max(.4, nextSpawn - 1.6);   // every plane you send off brings the next one in sooner
+  if (mode === 'story' && handled >= cfg.goal) setTimeout(() => finish(true), 600);
+}
+function loseLife(x, y, msg) {
+  lives--; shake = .3; sfx.oops(); pop(x, y - 30, msg, '#ff8a8a');
+  if (lives <= 0) setTimeout(() => finish(false), 700);
+}
+function crash(a, b) {
+  const x = (a.x + b.x) / 2, y = (a.y + b.y) / 2;
+  for (const p of [a, b]) p.st = 'gone';
+  for (const k of SVC) if ([a.id, b.id].includes(terms[k].busy)) terms[k].busy = 0;
+  for (let i = 0; i < 36; i++) { const an = rand(0, 6.3), s = rand(60, 320); parts.push({ x, y, vx: Math.cos(an) * s, vy: Math.sin(an) * s, life: 0, max: rand(.5, 1.1), col: ['#ffb02e', '#ff5a3c', '#fff1a8', '#555'][i % 4], r: rand(3, 8) }); }
+  sfx.crash(); loseLife(x, y, 'CRASH!');
+}
+function pop(x, y, text, col) { pops.push({ x, y, text, col, t: 0 }); }
+
+/* ================= UPDATE ================= */
+function update(dt) {
+  time += dt;
+  if (scene !== 'play') { menuPlanes(dt); return; }
+  elapsed += dt;
+
+  // arrivals
+  const total = mode === 'story' ? cfg.goal : Infinity;
+  nextSpawn -= dt;
+  if (nextSpawn <= 0 && spawned < total) {
+    const every = mode === 'story' ? cfg.every : Math.max(2.6, cfg.base * Math.pow(.94, handled));
+    nextSpawn = every * rand(.85, 1.15); pending++; spawned++;
+  }
+  qPhase += 100 * dt; syncQueue();
+  if (pending > 0 && runwayClear()) { const h = queuePos(0); h.col = qItems[0].col; planes.push(newPlane(h)); pending--; syncQueue(); }
+  if (pending >= 4) { pending--; syncQueue(); loseLife(1180, LAND_Y, 'Too many waiting!'); }
+
+  for (const p of planes) stepPlane(p, dt);
+
+  // ground collisions
+  const gnd = planes.filter(surface);
+  for (let i = 0; i < gnd.length; i++) for (let j = i + 1; j < gnd.length; j++) {
+    const a = gnd[i], b = gnd[j];
+    if (a.st === 'gone' || b.st === 'gone') continue;
+    if (a.st === 'dock' && b.st === 'dock') continue;
+    const inLine = q => q.st === 'queue' || (q.st === 'taxi' && q.go);   // planes already told to wait their turn (or rolling in from the line)
+    if (inLine(a) && inLine(b)) continue;
+    if (dist(a, b) < HIT_R * 2 - 4) { crash(a, b); }
+  }
+  planes = planes.filter(p => p.st !== 'gone');
+
+  for (let i = parts.length - 1; i >= 0; i--) { const q = parts[i]; q.life += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= .96; q.vy *= .96; if (q.life > q.max) parts.splice(i, 1); }
+  for (let i = pops.length - 1; i >= 0; i--) { pops[i].t += dt; if (pops[i].t > 1.1) pops.splice(i, 1); }
+  if (shake > 0) shake = Math.max(0, shake - dt);
+}
+
+// a couple of planes drifting over the title screen
+let menuP = [];
+function menuPlanes(dt) {
+  if (scene === 'play') return;
+  if (menuP.length < 3 && Math.random() < dt * .35) menuP.push({ x: -80, y: rand(80, 640), a: rand(-.25, .25), v: rand(90, 150), col: COLORS[(Math.random() * COLORS.length) | 0] });
+  for (const p of menuP) { p.x += Math.cos(p.a) * p.v * dt; p.y += Math.sin(p.a) * p.v * dt; }
+  menuP = menuP.filter(p => p.x < W + 100);
+}
+
+/* ================= DRAWING ================= */
+function rrect(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+function iconSvc(k, x, y, r, col) {
+  g.save(); g.translate(x, y); g.fillStyle = col || '#fff'; g.strokeStyle = col || '#fff'; g.lineWidth = r * .22; g.lineCap = 'round';
+  if (k === 'pax') {
+    g.beginPath(); g.arc(0, -r * .5, r * .3, 0, 6.3); g.fill();
+    g.beginPath(); g.moveTo(-r * .45, r * .6); g.quadraticCurveTo(-r * .45, -r * .1, 0, -r * .1); g.quadraticCurveTo(r * .45, -r * .1, r * .45, r * .6); g.closePath(); g.fill();
+  } else if (k === 'fuel') {
+    g.beginPath(); g.moveTo(0, -r * .75); g.bezierCurveTo(r * .6, -r * .05, r * .6, r * .7, 0, r * .7); g.bezierCurveTo(-r * .6, r * .7, -r * .6, -r * .05, 0, -r * .75); g.fill();
+  } else if (k === 'fix') {
+    g.beginPath(); g.arc(0, 0, r * .42, 0, 6.3); g.stroke();
+    for (let i = 0; i < 6; i++) { g.save(); g.rotate(i * Math.PI / 3); g.fillRect(-r * .1, -r * .78, r * .2, r * .34); g.restore(); }
+  } else if (k === 'take') {
+    g.beginPath(); g.moveTo(-r * .55, r * .5); g.lineTo(r * .55, -r * .5); g.stroke();
+    g.beginPath(); g.moveTo(r * .65, -r * .65); g.lineTo(r * .05, -r * .5); g.lineTo(r * .5, -r * .05); g.closePath(); g.fill();
+  }
+  g.restore();
+}
+
+function drawPause(p) {
+  g.save(); g.translate(p.x, p.y + 34);
+  g.fillStyle = 'rgba(30,40,60,.85)'; g.beginPath(); g.arc(0, 0, 12, 0, 6.3); g.fill();
+  g.fillStyle = '#fff'; g.fillRect(-5, -5, 3.5, 10); g.fillRect(1.5, -5, 3.5, 10);
+  g.restore();
+}
+function drawPlane(p, shadowOnly) {
+  const s = (1 + p.alt * .45) * .8;
+  g.save();
+  g.translate(p.x, p.y); g.rotate(p.a);
+  // shadow
+  g.save(); g.translate(5 + p.alt * 22, 5 + p.alt * 22); g.scale(s, s); g.fillStyle = `rgba(0,0,0,${.28 - p.alt * .12})`;
+  planeShape(); g.fill(); g.restore();
+  g.scale(s, s);
+  g.fillStyle = '#f5f7fb'; g.strokeStyle = '#2b3a4e'; g.lineWidth = 2;
+  planeShape(); g.fill(); g.stroke();
+  // coloured wings tips, tail and stripe
+  g.fillStyle = p.col;
+  g.beginPath(); g.moveTo(-2, -5); g.lineTo(-14, -27); g.lineTo(-22, -27); g.lineTo(-12, -5); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-2, 5); g.lineTo(-14, 27); g.lineTo(-22, 27); g.lineTo(-12, 5); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-26, -1); g.lineTo(-34, -10); g.lineTo(-38, -10); g.lineTo(-34, 0); g.lineTo(-38, 10); g.lineTo(-34, 10); g.lineTo(-26, 1); g.closePath(); g.fill();
+  g.fillStyle = '#2b3a4e'; rrect(14, -3.5, 9, 7, 3); g.fill();
+  g.restore();
+}
+function planeShape() {
+  g.beginPath();
+  g.moveTo(32, 0); g.quadraticCurveTo(30, -7, 20, -7); g.lineTo(-24, -5); g.lineTo(-24, 5); g.lineTo(20, 7); g.quadraticCurveTo(30, 7, 32, 0);
+  g.moveTo(4, -5); g.lineTo(-12, -28); g.lineTo(-23, -28); g.lineTo(-12, -4);
+  g.moveTo(4, 5); g.lineTo(-12, 28); g.lineTo(-23, 28); g.lineTo(-12, 4);
+  g.moveTo(-24, -1); g.lineTo(-36, -11); g.lineTo(-40, -11); g.lineTo(-35, 0); g.lineTo(-40, 11); g.lineTo(-36, 11); g.lineTo(-24, 1);
+}
+
+function drawTree(x, y, k) {
+  const T = THEME;
+  g.save(); g.translate(x, y); g.scale(k, k);
+  g.fillStyle = 'rgba(0,0,0,.14)'; g.beginPath(); g.ellipse(5, 8, 22, 17, 0, 0, 6.3); g.fill();
+  if (T.tree === 'pine') {
+    g.fillStyle = '#5a4030'; g.fillRect(-3, 10, 6, 10);
+    for (let i = 0; i < 3; i++) { g.fillStyle = i % 2 ? T.tl : T.td; g.beginPath(); g.moveTo(0, -26 + i * 11); g.lineTo(-22 + i * 3, 4 + i * 8); g.lineTo(22 - i * 3, 4 + i * 8); g.closePath(); g.fill(); }
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(0, -26); g.lineTo(-9, -9); g.quadraticCurveTo(0, -4, 9, -9); g.closePath(); g.fill();
+  } else if (T.tree === 'cactus') {
+    g.fillStyle = T.td; rrect(-7, -24, 14, 46, 7); g.fill(); rrect(-20, -6, 8, 22, 4); g.fill(); rrect(-20, 6, 18, 8, 4); g.fill(); rrect(12, -14, 8, 20, 4); g.fill(); rrect(2, -2, 18, 8, 4); g.fill();
+    g.fillStyle = T.tl; rrect(-3, -22, 4, 40, 2); g.fill();
+  } else if (T.tree === 'palm') {
+    g.strokeStyle = '#8a6238'; g.lineWidth = 7; g.lineCap = 'round'; g.beginPath(); g.moveTo(-4, 20); g.quadraticCurveTo(6, 0, 0, -16); g.stroke();
+    for (let i = 0; i < 6; i++) { g.save(); g.translate(0, -16); g.rotate(i * 1.05 + .3); g.fillStyle = i % 2 ? T.tl : T.td; g.beginPath(); g.ellipse(15, 0, 17, 6, 0, 0, 6.3); g.fill(); g.restore(); }
+    g.fillStyle = '#7a4f28'; g.beginPath(); g.arc(-3, -13, 4, 0, 6.3); g.arc(4, -12, 4, 0, 6.3); g.fill();
+  } else if (T.tree === 'rock') {
+    g.fillStyle = T.td; g.beginPath(); g.moveTo(-22, 14); g.lineTo(-16, -8); g.lineTo(2, -18); g.lineTo(20, -4); g.lineTo(24, 14); g.closePath(); g.fill();
+    g.fillStyle = T.tl; g.beginPath(); g.moveTo(-16, -8); g.lineTo(2, -18); g.lineTo(6, 0); g.lineTo(-8, 8); g.closePath(); g.fill();
+  } else {
+    g.fillStyle = T.td; g.beginPath(); g.arc(0, 0, 22, 0, 6.3); g.fill(); g.fillStyle = T.tl; g.beginPath(); g.arc(-5, -6, 12, 0, 6.3); g.fill();
+    if (T.name === 'Blossom') { g.fillStyle = 'rgba(255,255,255,.85)'; for (const [a, b] of [[8, 6], [-12, 8], [10, -10], [-2, 12]]) { g.beginPath(); g.arc(a, b, 2.6, 0, 6.3); g.fill(); } }
+  }
+  g.restore();
+}
+function drawWorld() {
+  const T = THEME;
+  // ground + fields
+  g.fillStyle = T.bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = T.field;
+  for (let i = 0; i < 8; i++) g.fillRect(((i * 197) % 1200) - 40, ((i * 331) % 640) - 30, 190, 120);
+  g.fillStyle = T.blob;
+  for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(((i * 263) % 1180) + 40, ((i * 149) % 640) + 40, 46, 0, 6.3); g.fill(); }
+  g.fillStyle = `rgba(255,255,255,${T.stripe})`;
+  for (let x = 0; x < W; x += 160) g.fillRect(x, 0, 80, H);
+  if (T.ponds) for (const [x, y, rx, ry] of [[110, 150, 100, 56], [1170, 560, 110, 60], [300, 660, 80, 34]]) {
+    g.fillStyle = '#f9efc4'; g.beginPath(); g.ellipse(x, y, rx + 12, ry + 10, 0, 0, 6.3); g.fill();
+    g.fillStyle = '#4fd1d6'; g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, 6.3); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 3; g.beginPath(); g.ellipse(x, y, rx * .6, ry * .55, 0, 3.5, 5.6); g.stroke();
+  }
+  for (let i = 0; i < 46; i++) {
+    const fx = (i * 389 + 53) % 1240 + 20, fy = (i * 211 + 97) % 680 + 20;
+    if (fx > 230 && fx < 960 && fy > 110 && fy < 610) continue;
+    g.fillStyle = T.dots[i % 3 ? 0 : 1];
+    if (T.night) g.globalAlpha = .45 + .55 * Math.sin(time * 2 + i);
+    g.beginPath(); g.arc(fx, fy, 2.4, 0, 6.3); g.fill(); g.globalAlpha = 1;
+  }
+  // trees
+  const trees = [[40, 40], [90, 90], [30, 620], [100, 670], [1200, 40], [1160, 100], [1230, 640], [1170, 690], [330, 690], [380, 40], [790, 690], [850, 40], [60, 340], [1220, 340]];
+  for (const [x, y] of trees) drawTree(x, y, 1);
+
+  // apron
+  g.fillStyle = T.ap[0]; rrect(APRON.x - 12, APRON.y - 12, APRON.w + 24, APRON.h + 24, 14); g.fill();
+  const ag = g.createLinearGradient(0, APRON.y, 0, APRON.y + APRON.h); ag.addColorStop(0, T.ap[1]); ag.addColorStop(1, T.ap[2]);
+  g.fillStyle = ag; rrect(APRON.x, APRON.y, APRON.w, APRON.h, 8); g.fill();
+  g.save(); rrect(APRON.x, APRON.y, APRON.w, APRON.h, 8); g.clip();
+  g.strokeStyle = 'rgba(30,40,55,.13)'; g.lineWidth = 2; g.beginPath();
+  for (let x = APRON.x + 117; x < APRON.x + APRON.w; x += 117) { g.moveTo(x, APRON.y); g.lineTo(x, APRON.y + APRON.h); }
+  for (let y = APRON.y + 96; y < APRON.y + APRON.h; y += 96) { g.moveTo(APRON.x, y); g.lineTo(APRON.x + APRON.w, y); }
+  g.stroke(); g.restore();
+  g.strokeStyle = '#f2c94c'; g.lineWidth = 3; g.setLineDash([22, 14]); rrect(APRON.x + 14, APRON.y + 14, APRON.w - 28, APRON.h - 28, 6); g.stroke(); g.setLineDash([]);
+  // island
+  g.fillStyle = T.ap[0]; rrect(560, 300, 90, 90, 8); g.fill(); g.fillStyle = T.bg; rrect(568, 308, 74, 74, 6); g.fill();
+  drawTree(605, 345, .9);
+  if (T.night) for (const [x, y] of [[APRON.x + 6, APRON.y + 6], [APRON.x + APRON.w - 6, APRON.y + 6], [APRON.x + 6, APRON.y + APRON.h - 6], [APRON.x + APRON.w - 6, APRON.y + APRON.h - 6], [605, 345]]) {
+    const lg = g.createRadialGradient(x, y, 2, x, y, 120); lg.addColorStop(0, 'rgba(255,230,140,.38)'); lg.addColorStop(1, 'rgba(255,230,140,0)');
+    g.fillStyle = lg; g.fillRect(x - 120, y - 120, 240, 240);
+    g.fillStyle = '#ffe28a'; g.beginPath(); g.arc(x, y, 5, 0, 6.3); g.fill();
+  }
+
+  // runways
+  for (const [y, label, landing] of [[LAND_Y, 'LANDING', true], [TAKE_Y, 'TAKE-OFF', false]]) {
+    g.fillStyle = THEME.rw[0]; g.fillRect(930, y - 36, W - 930, 72);
+    g.fillStyle = THEME.rw[1]; g.fillRect(930, y - 30, W - 930, 60);
+    g.strokeStyle = '#f5f7fb'; g.lineWidth = 4; g.setLineDash([26, 22]); g.beginPath(); g.moveTo(950, y); g.lineTo(W, y); g.stroke(); g.setLineDash([]);
+    g.fillStyle = '#f5f7fb'; for (let i = 0; i < 5; i++) g.fillRect(W - 62 + (i % 2) * 0, y - 24 + i * 10, 40, 4);
+    // direction arrows
+    const ac = landing ? '#ff6a5c' : '#4cd678', pulse = .6 + .4 * Math.sin(time * 5);
+    g.fillStyle = ac; g.globalAlpha = pulse;
+    for (let k = 0; k < 2; k++) { const ax = 962 + k * 0, ay = y - 14 + k * 28; g.beginPath(); if (landing) { g.moveTo(ax, ay); g.lineTo(ax + 14, ay - 9); g.lineTo(ax + 14, ay + 9); } else { g.moveTo(ax + 14, ay); g.lineTo(ax, ay - 9); g.lineTo(ax, ay + 9); } g.closePath(); g.fill(); }
+    g.globalAlpha = 1;
+    for (let x = 960; x < W; x += 52) for (const dy of [-33, 33]) { const on2 = .5 + .5 * Math.sin(time * 3 - x / 90); g.fillStyle = `rgba(255,214,102,${.45 + on2 * .5})`; g.beginPath(); g.arc(x, y + dy, 2.6, 0, 6.3); g.fill(); }
+    g.fillStyle = 'rgba(20,40,60,.5)'; rrect(1090 - 52, y + 40, 104, 24, 12); g.fill();
+    g.font = '700 14px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillText(label, 1090, y + 57);
+  }
+
+  // terminals
+  for (const k of SVC) {
+    const T = TERMS[k], r = T.rect, on = terms[k].active;
+    g.globalAlpha = on ? 1 : .45;
+    g.fillStyle = 'rgba(0,0,0,.22)'; rrect(r.x + 6, r.y + 8, r.w, r.h, 14); g.fill();
+    g.fillStyle = T.dark; rrect(r.x, r.y, r.w, r.h, 14); g.fill();
+    g.fillStyle = T.col; rrect(r.x + 5, r.y + 5, r.w - 10, r.h - 10, 11); g.fill();
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+    const ix = k === 'fix' ? cx + 14 : r.x + 52;
+    g.fillStyle = 'rgba(255,255,255,.16)'; rrect(r.x + 5, r.y + 5, r.w - 10, 16, 11); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.28)'; g.beginPath(); g.arc(ix, cy, k === 'fix' ? 34 : 30, 0, 6.3); g.fill();
+    iconSvc(k, ix, cy, 24, '#fff');
+    g.font = '700 16px Fredoka, sans-serif'; g.textAlign = 'center'; g.lineJoin = 'round'; g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.28)'; g.fillStyle = '#fff';
+    if (k === 'fix') { g.save(); g.translate(r.x + 28, cy); g.rotate(-Math.PI / 2); g.strokeText(T.name, 0, 0); g.fillText(T.name, 0, 0); g.restore(); }
+    else { g.strokeText(T.name, r.x + 144, cy - 6); g.fillText(T.name, r.x + 144, cy - 6); }
+    g.globalAlpha = 1;
+    // gate marks
+    gateMark(T.inn, T.dir, '#4cd678', on); gateMark(T.out, { x: -T.dir.x, y: -T.dir.y }, '#ff6a5c', on);
+    if (terms[k].busy) { g.fillStyle = 'rgba(0,0,0,.35)'; rrect(r.x, r.y, r.w, r.h, 14); g.fill(); }
+    if (on) drawUpgrade(k, r);
+  }
+}
+function drawUpgrade(k, r) {
+  const lvl = terms[k].lvl || 0, can = ups > 0 && lvl < UP_MAX, fix = k === 'fix', cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+  const sx = fix ? cx + 14 : r.x + 144, sy = fix ? r.y + 192 : cy + 20, bx = fix ? cx + 14 : r.x + r.w - 24, by = fix ? r.y + 48 : cy;
+  // speed label + two pips (a pip fills in for each upgrade bought)
+  const t = lvl >= UP_MAX ? 'MAX' : lvl === 0 ? 'SLOW' : 'FASTER';
+  g.font = '700 13px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.95)';
+  const tx = fix ? sx : sx - 24, ty = fix ? sy : sy + 4;
+  g.fillText(t, tx, ty);
+  for (let i = 0; i < UP_MAX; i++) {
+    const px = fix ? sx + (i - .5) * 22 : sx + 26 + i * 20, py = fix ? sy + 20 : sy;
+    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.arc(px, py, 7.5, 0, 6.3); g.fill();
+    if (i < lvl) { g.fillStyle = '#ffe14d'; g.beginPath(); g.arc(px, py, 5, 0, 6.3); g.fill(); }
+  }
+  if (can) {
+    const pu = .5 + .5 * Math.sin(time * 6), R = fix ? 20 : 17;
+    g.fillStyle = `rgba(125,255,160,${.25 + pu * .3})`; g.beginPath(); g.arc(bx, by, R + 5 + pu * 5, 0, 6.3); g.fill();
+    g.fillStyle = '#2fb85a'; g.strokeStyle = '#fff'; g.lineWidth = 3.5; g.beginPath(); g.arc(bx, by, R, 0, 6.3); g.fill(); g.stroke();
+    const q = R / 20;
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(bx, by - 11 * q); g.lineTo(bx + 11 * q, by + 2 * q); g.lineTo(bx + 4 * q, by + 2 * q); g.lineTo(bx + 4 * q, by + 10 * q); g.lineTo(bx - 4 * q, by + 10 * q); g.lineTo(bx - 4 * q, by + 2 * q); g.lineTo(bx - 11 * q, by + 2 * q); g.closePath(); g.fill();
+  }
+}
+function gateMark(pt, dir, col, on) {
+  g.save(); g.translate(pt.x, pt.y); g.rotate(Math.atan2(dir.y, dir.x)); g.globalAlpha = on ? 1 : .4;
+  g.fillStyle = '#e9e1c8'; rrect(-24, -9, 48, 18, 5); g.fill();
+  g.fillStyle = col; g.beginPath(); g.moveTo(10, 0); g.lineTo(-6, -7); g.lineTo(-6, 7); g.closePath(); g.fill(); g.restore();
+}
+
+function drawBadges(p) {
+  // the stops in the order the plane needs them, ending with take-off; the next stop is the big one
+  const list = p.need.length ? [...p.need, 'take'] : ['take'];
+  const n = list.length, sp = 40, x0 = p.x - (n - 1) * sp / 2, y = p.y - 44 - p.alt * 16;
+  list.forEach((k, i) => {
+    const x = x0 + i * sp, next = i === 0, r = next ? 16 : 12;
+    if (i > 0) { g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.moveTo(x - sp / 2 + 4, y - 4); g.lineTo(x - sp / 2 + 10, y); g.lineTo(x - sp / 2 + 4, y + 4); g.closePath(); g.fill(); }
+    g.globalAlpha = next ? 1 : .8;
+    g.fillStyle = 'rgba(0,0,0,.25)'; g.beginPath(); g.arc(x + 1, y + 2, r, 0, 6.3); g.fill();
+    g.fillStyle = k === 'take' ? '#4cd678' : TERMS[k].col; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.fill();
+    g.lineWidth = next ? 3 : 2; g.strokeStyle = '#fff'; g.stroke();
+    iconSvc(k, x, y, r - 3, '#fff'); g.globalAlpha = 1;
+  });
+}
+
+let drag = null;            // { plane, pts }
+function render() {
+  const rs = dpr; g.setTransform(rs, 0, 0, rs, 0, 0);
+  g.save();
+  if (shake > 0) g.translate((Math.random() - .5) * shake * 26, (Math.random() - .5) * shake * 26);
+  drawWorld();
+  if (THEME.flakes) { g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 46; i++) { const fx = (i * 211 + Math.sin(time * .8 + i) * 18 + 1280) % W, fy = (time * (28 + i % 5 * 8) + i * 97) % H; g.beginPath(); g.arc(fx, fy, 2 + i % 3 * .8, 0, 6.3); g.fill(); } }
+
+  if (scene === 'menu' || scene === 'intro') { for (const p of menuP) { p.alt = 1; drawPlane({ x: p.x, y: p.y, a: p.a, alt: 1, col: p.col }); } }
+
+  // planes circling in the holding line (drawn above the ground, below the ones that are landing)
+  if (scene === 'play' || scene === 'pause') {
+    qItems.forEach((it, i) => {
+      const q = queuePos(i), k = clamp((time - it.born) / .7, 0, 1);
+      g.globalAlpha = k; drawPlane({ x: q.x, y: q.y, a: q.a, alt: .9, col: it.col }); g.globalAlpha = 1;
+    });
+  }
+  // routes
+  for (const p of planes) {
+    if (p.path.length && p.st === 'taxi') routeLine([{ x: p.x, y: p.y }, ...p.path.slice(p.pi)], 'rgba(255,255,255,.85)', false);
+  }
+  if (drag) {
+    routeLine(drag.snap ? [...drag.pts, approachOf(drag.snap), drag.snap] : drag.pts, '#ffe14d', true);
+    for (const t of targetsFor(drag.plane)) { const pr = .5 + .5 * Math.sin(time * 8); if (drag.snap === t) { g.fillStyle = 'rgba(255,225,77,.35)'; g.beginPath(); g.arc(t.x, t.y, 38, 0, 6.3); g.fill(); } g.strokeStyle = t.type === 'gate' ? TERMS[t.k].col : '#4cd678'; g.lineWidth = 4; g.globalAlpha = .5 + .5 * pr; g.beginPath(); g.arc(t.x, t.y, 30 + pr * 6, 0, 6.3); g.stroke(); g.globalAlpha = 1; }
+  }
+
+  // planes (grounded first, flyers on top)
+  const order = [...planes].sort((a, b) => a.alt - b.alt);
+  for (const p of order) {
+    drawPlane(p); if (p.paused && p.st === 'taxi') drawPause(p);
+    if (p.st === 'service') {
+      const k = 1 - p.svcT / (p.svcDur || SERVICE_T[p.svcK]);
+      g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 6; g.beginPath(); g.arc(p.x, p.y, 36, 0, 6.3); g.stroke();
+      g.strokeStyle = '#fff'; g.beginPath(); g.arc(p.x, p.y, 36, -Math.PI / 2, -Math.PI / 2 + k * 6.283); g.stroke();
+    } else if (p.st !== 'dock') drawBadges(p);
+    if (p.st === 'wait' && p.pat < .65) {
+      g.strokeStyle = p.pat < .3 ? '#ff4a4a' : '#ffb02e'; g.lineWidth = 5; g.beginPath(); g.arc(p.x, p.y, 40, -Math.PI / 2, -Math.PI / 2 + p.pat * 6.283); g.stroke();
+    }
+  }
+  for (const q of parts) { g.globalAlpha = 1 - q.life / q.max; g.fillStyle = q.col; g.beginPath(); g.arc(q.x, q.y, q.r * (1 - q.life / q.max * .5), 0, 6.3); g.fill(); }
+  g.globalAlpha = 1;
+  g.font = '700 28px Fredoka, sans-serif'; g.textAlign = 'center';
+  for (const q of pops) { const k = q.t / 1.1; g.globalAlpha = 1 - k * k; g.lineWidth = 5; g.strokeStyle = 'rgba(0,0,0,.35)'; g.strokeText(q.text, q.x, q.y - k * 36); g.fillStyle = q.col; g.fillText(q.text, q.x, q.y - k * 36); }
+  g.globalAlpha = 1;
+  g.restore();
+
+  if (scene === 'play' || scene === 'pause' || scene === 'end') drawHud();
+}
+function routeLine(pts, col, thick) {
+  if (pts.length < 2) return;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = thick ? 9 : 8; g.beginPath(); g.moveTo(pts[0].x + 1, pts[0].y + 2); for (const q of pts) g.lineTo(q.x + 1, q.y + 2); g.stroke();
+  g.strokeStyle = col; g.lineWidth = thick ? 6 : 5; g.beginPath(); g.moveTo(pts[0].x, pts[0].y); for (const q of pts) g.lineTo(q.x, q.y); g.stroke();
+  const e = pts[pts.length - 1]; g.fillStyle = col; g.beginPath(); g.arc(e.x, e.y, 7, 0, 6.3); g.fill();
+}
+function drawHud() {
+  // bar
+  g.fillStyle = 'rgba(20,40,60,.62)'; rrect(84, 12, 350, 58, 29); g.fill(); g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 2; g.stroke();
+  // lives
+  for (let i = 0; i < MAX_LIVES; i++) heart(118 + i * 38, 41, 13, i < lives);
+  // progress
+  g.font = '700 28px Fredoka, sans-serif'; g.textAlign = 'left'; g.fillStyle = '#fff';
+  const prog = mode === 'story' ? `${handled} / ${cfg.goal}` : `${handled}`;
+  iconSvc('take', 244, 41, 16, '#ffd24a'); g.fillText(prog, 266, 51);
+  const m = Math.floor(elapsed / 60), s = Math.floor(elapsed % 60);
+  g.textAlign = 'right'; g.fillStyle = '#cfe7ff'; g.fillText(`${m}:${String(s).padStart(2, '0')}`, 412, 51);
+  if (ups > 0) {
+    g.font = '700 20px Fredoka, sans-serif'; g.textAlign = 'left';
+    const t = ups === 1 ? 'Upgrade ready: tap a building' : `${ups} upgrades ready: tap a building`, tw = g.measureText(t).width + 62;
+    const pu = .5 + .5 * Math.sin(time * 5);
+    g.fillStyle = 'rgba(31,138,69,.9)'; rrect(84, 78, tw, 36, 18); g.fill(); g.strokeStyle = `rgba(255,255,255,${.35 + pu * .5})`; g.lineWidth = 2.5; g.stroke();
+    g.fillStyle = '#fff'; g.beginPath(); g.moveTo(106, 87); g.lineTo(116, 98); g.lineTo(110, 98); g.lineTo(110, 105); g.lineTo(102, 105); g.lineTo(102, 98); g.lineTo(96, 98); g.closePath(); g.fill();
+    g.fillText(t, 126, 103);
+  }
+  // planes waiting in the sky
+  if (pending > 0) {
+    g.font = '700 20px Fredoka, sans-serif'; g.textAlign = 'center';
+    const t = pending >= 3 ? 'Full sky!' : `${pending} waiting to land`, tw = g.measureText(t).width + 36, cx0 = clamp(QT.cx, tw / 2 + 12, W - tw / 2 - 12);
+    g.fillStyle = pending >= 3 ? 'rgba(190,40,40,.8)' : 'rgba(20,40,60,.62)'; rrect(cx0 - tw / 2, 10, tw, 36, 18); g.fill();
+    g.fillStyle = '#fff'; g.fillText(t, cx0, 35);
+  }
+}
+function heart(x, y, r, on) {
+  g.fillStyle = on ? '#ff5a7a' : 'rgba(255,255,255,.22)';
+  g.beginPath(); g.moveTo(x, y + r * .9); g.bezierCurveTo(x - r * 1.5, y - r * .1, x - r * .6, y - r * 1.2, x, y - r * .35); g.bezierCurveTo(x + r * .6, y - r * 1.2, x + r * 1.5, y - r * .1, x, y + r * .9); g.fill();
+}
+
+/* ================= INPUT ================= */
+const toWorld = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; };
+cv.addEventListener('pointerdown', e => {
+  beep(1, .01, 'sine', .001);
+  if (scene !== 'play') return;
+  const pt = toWorld(e); let best = null, bd = PICK_R;
+  if (upgradeAt(pt)) return;
+  for (const p of planes) { if (!['wait', 'roll', 'taxi', 'queue'].includes(p.st)) continue; const d = dist(p, pt); if (d < bd) { bd = d; best = p; } }
+  if (!best) return;
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  // a plane that is following a line can be tapped to pause it; tapping again resumes. Dragging instead redraws its line.
+  const prev = best.st === 'taxi' && best.path.length ? { path: best.path, pi: best.pi, go: best.go, paused: !!best.paused } : null;
+  best.path = []; best.pi = 0; best.go = false; best.paused = false; if (best.st === 'taxi' || best.st === 'queue') best.st = 'wait';
+  drag = { plane: best, pts: [{ x: best.x, y: best.y }], id: e.pointerId, snap: null, prev, x0: e.clientX, y0: e.clientY, moved: false };
+});
+cv.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > 7) drag.moved = true;
+  dragUpdate(drag, toWorld(e));
+});
+function endDrag(e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  const pt = toWorld(e), d = drag; drag = null;
+  if (d.prev && !d.moved && d.plane.st !== 'gone') {
+    const p = d.plane; p.path = d.prev.path; p.pi = d.prev.pi; p.go = d.prev.go; p.st = 'taxi'; p.paused = !d.prev.paused;
+    if (p.paused) p.v = 0;
+    return;
+  }
+  dragUpdate(d, pt);
+  if (d.plane.st !== 'gone') setPath(d.plane, d.pts, d.snap);
+}
+cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+cv.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ================= FLOW ================= */
+const show = id => $(id).classList.remove('hidden'), hide = id => $(id).classList.add('hidden');
+function hideAll() { ['menu', 'lvlScreen', 'intro', 'pauseScr', 'tutScr', 'end'].forEach(hide); }
+function toMenu() {
+  hideAll(); scene = 'menu'; THEME = THEMES[0]; ups = 0; $('pauseBtn').style.display = 'none'; planes = []; drag = null; parts = []; pops = []; show('menu'); menuStat();
+}
+function menuStat() {
+  const total = prog.stars.reduce((a, b) => a + (b || 0), 0);
+  const sb = Math.max(0, ...survScores);
+  $('menuStat').textContent = (total ? `★ ${total}` : '') + (total && sb ? '    ' : '') + (sb ? `Survival best: ${sb}` : '');
+  $('bResumeRun').style.display = store.get('ar-save', '') ? '' : 'none';
+}
+let lvlKind = 'story';
+function buildLevels() {
+  $('lvlT').textContent = lvlKind === 'story' ? 'Pick a level' : 'Survival: pick an airport';
+  const list = lvlKind === 'story' ? LEVELS : SURV;
+  $('levels').innerHTML = list.map((l, i) => {
+    const open = lvlKind === 'story' ? unlocked(i) : survUnlocked(i);
+    let sub = '';
+    if (lvlKind === 'story') { const s = stars(i); sub = `<small>${'★'.repeat(s)}<i>${'★'.repeat(3 - s)}</i></small>`; }
+    else sub = `<small style="font-size:21px;letter-spacing:0">${survBest(i) ? 'best ' + survBest(i) : 'new'}</small>`;
+    const th = THEMES[l.theme || 0], st = open ? ` style="background:${th.btn[0]};box-shadow:0 6px 0 ${th.btn[1]}"` : '';
+    return `<button class="lv ${open ? '' : 'lock'}" data-i="${i}"${st}>${open ? (i + 1) + sub : ''}</button>`;
+  }).join('');
+}
+function openLevels(kind) { lvlKind = kind; hideAll(); buildLevels(); show('lvlScreen'); }
+function openIntro(i) {
+  mode = 'story'; levelIdx = i; cfg = LEVELS[i]; resetGame(); menuP = [];
+  hideAll(); scene = 'intro';
+  $('introT').textContent = 'Level ' + (i + 1);
+  $('introP').textContent = `Send ${cfg.goal} planes on their way. Keep ${MAX_LIVES} hearts to earn 3 stars. Buildings start slow: each plane you send off earns an upgrade, tap a building to speed it up.`;
+  show('intro');
+}
+function openSurvival(i) {
+  if (i === undefined) i = survIdx;
+  mode = 'surv'; survIdx = i; cfg = SURV[i]; resetGame(); menuP = [];
+  hideAll(); scene = 'intro';
+  $('introT').textContent = 'Survival ' + (i + 1);
+  $('introP').textContent = 'No finish line. Planes keep coming, faster and faster, until you run out of hearts.' + (cfg.need ? ` Score ${cfg.need} to open the next airport.` : '') + ' Each plane sent off earns an upgrade: tap a building to speed it up.';
+  show('intro');
+}
+// the how-to-play card pops up every time a game starts; the planes wait until it is dismissed
+function startPlay(skipTut) {
+  store.set('ar-save', ''); hideAll(); $('pauseBtn').style.display = 'block';
+  if (skipTut === true) { scene = 'play'; return; }
+  scene = 'pause'; show('tutScr');
+}
+function closeTut() { hide('tutScr'); scene = 'play'; }
+function finish(win) {
+  if (scene !== 'play') return;
+  scene = 'end'; $('pauseBtn').style.display = 'none'; drag = null; store.set('ar-save', '');
+  const stg = $('endStars'), nx = $('bNext');
+  if (mode === 'story') {
+    if (win) {
+      const s = clamp(lives, 1, 3);
+      if (s > stars(levelIdx)) { prog.stars[levelIdx] = s; store.set('ar-prog', JSON.stringify(prog)); }
+      $('endT').textContent = 'Level clear!';
+      stg.innerHTML = '★'.repeat(s) + '<i>' + '★'.repeat(3 - s) + '</i>';
+      $('endP').textContent = `${handled} planes sent off`;
+      nx.style.display = levelIdx < LEVELS.length - 1 ? '' : 'none';
+    } else {
+      $('endT').textContent = 'Too many crashes!'; stg.innerHTML = '<i>★★★</i>'; $('endP').textContent = `${handled} of ${cfg.goal} planes sent off`; nx.style.display = 'none';
+    }
+  } else {
+    const was = survBest(survIdx);
+    if (handled > was) { survScores[survIdx] = handled; store.set('ar-surv2', JSON.stringify(survScores)); }
+    const opened = cfg.need && handled >= cfg.need && was < cfg.need;
+    $('endT').textContent = 'Game over'; stg.innerHTML = '';
+    $('endP').innerHTML = `Planes handled: <b>${handled}</b><br>Best: ${survBest(survIdx)}` + (opened ? '<br>Next airport unlocked!' : '');
+    nx.style.display = 'none';
+  }
+  show('end');
+}
+function saveRun() {
+  store.set('ar-save', JSON.stringify({ mode, levelIdx, survIdx, planes, terms, handled, spawned, pending, lives, elapsed, nextSpawn, uid, ups }));
+}
+function continueRun() {
+  let d; try { d = JSON.parse(store.get('ar-save', '')); } catch (e) { d = null; }
+  if (!d) { store.set('ar-save', ''); toMenu(); return; }
+  mode = d.mode; levelIdx = d.levelIdx || 0; survIdx = d.survIdx || 0;
+  cfg = mode === 'story' ? LEVELS[levelIdx] : SURV[survIdx];
+  resetGame(); menuP = [];
+  Object.assign(terms, d.terms); planes = d.planes; handled = d.handled; spawned = d.spawned; pending = d.pending; lives = d.lives; elapsed = d.elapsed; nextSpawn = d.nextSpawn; uid = d.uid; ups = d.ups || 0;
+  hideAll(); scene = 'pause'; $('pauseBtn').style.display = 'block'; show('pauseScr');
+}
+function pause() { if (scene !== 'play') return; scene = 'pause'; drag = null; saveRun(); show('pauseScr'); }
+function resume() { if (scene !== 'pause') return; if (!$('tutScr').classList.contains('hidden')) { closeTut(); return; } hide('pauseScr'); scene = 'play'; store.set('ar-save', ''); }
+function retry() { if (mode === 'story') openIntro(levelIdx); else openSurvival(survIdx); }
+
+$('bPlay').onclick = () => openLevels('story');
+$('bSurv').onclick = () => openLevels('surv');
+$('bResumeRun').onclick = continueRun;
+$('bLvlBack').onclick = toMenu;
+$('levels').onclick = e => { const b = e.target.closest('.lv'); if (b && !b.classList.contains('lock')) (lvlKind === 'story' ? openIntro : openSurvival)(+b.dataset.i); };
+$('bStart').onclick = () => startPlay();
+$('bTutGo').onclick = closeTut;
+$('pauseBtn').onclick = pause;
+$('bResume').onclick = resume;
+$('bRestart').onclick = retry;
+$('bQuit').onclick = toMenu;
+$('bRetry').onclick = retry;
+$('bNext').onclick = () => openIntro(levelIdx + 1);
+$('bEndMenu').onclick = toMenu;
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'p') { scene === 'play' ? pause() : resume(); } });
+
+/* ================= LOOP ================= */
+let last = 0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(.05, (ts - last) / 1000 || .016); last = ts;
+  update(dt); render();
+}
+
+window.__ar = {
+  st: () => ({ scene, handled, lives, pending, spawned, elapsed, planes: planes.map(p => ({ id: p.id, x: p.x, y: p.y, st: p.st, need: [...p.need], pat: p.pat })) }),
+  route: (id, pts) => { const p = planes.find(q => q.id === id); return p ? setPath(p, [{ x: p.x, y: p.y }, ...pts]) : false; },
+  setHandled: n => { handled = n; },
+  sample: n => Array.from({ length: n }, () => newPlane().need),
+  busy: (k, v) => { terms[k].busy = v; },
+  ups: n => { ups = n; }, lvl: (k, v) => { terms[k].lvl = v; }, level: i => { openIntro(i); startPlay(true); }, surv: i => { openSurvival(i || 0); startPlay(true); }, save: () => store.get('ar-save', ''), cont: () => continueRun()
+};
+
+layout(); resetGame(); planes = []; menuStat();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

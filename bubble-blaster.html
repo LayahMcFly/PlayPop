@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Bubble Blaster</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0a3d8f; font-family: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #fff; }
+#wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+canvas { display: block; cursor: none; }
+.ov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(6, 28, 80, .6); backdrop-filter: blur(3px); z-index: 10; animation: fade .2s; }
+.ov.hidden { display: none; }
+@keyframes fade { from { opacity: 0; } }
+.panel { width: min(100%, 360px); max-height: 96dvh; overflow: auto; background: #fff; color: #26384c; border-radius: 28px; padding: 22px 20px 24px; text-align: center; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 0 rgba(0,0,0,.18), 0 24px 44px rgba(0,0,0,.35); animation: rise .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes rise { from { transform: translateY(26px) scale(.94); opacity: 0; } }
+.panel h1 { margin: 0; font-size: 44px; line-height: 1; color: #1d8fe0; text-shadow: 0 3px 0 #bfe3fb; }
+.panel h2 { margin: 0; font-size: 34px; color: #1d8fe0; }
+.panel p { margin: 0; font-size: 17px; font-weight: 500; color: #51647a; line-height: 1.3; }
+.btn { height: 60px; border-radius: 18px; font-size: 24px; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; border: 0; cursor: pointer; font-family: inherit; }
+.btn small { font-size: 14px; font-weight: 600; opacity: .9; }
+.btn:active { transform: translateY(4px); }
+.btn.easy { background: #36b86b; box-shadow: 0 6px 0 #1f8a45; } .btn.easy:active { box-shadow: 0 2px 0 #1f8a45; }
+.btn.med { background: #ff9d1c; box-shadow: 0 6px 0 #c46a00; } .btn.med:active { box-shadow: 0 2px 0 #c46a00; }
+.btn.hard { background: #e8453c; box-shadow: 0 6px 0 #a82a22; } .btn.hard:active { box-shadow: 0 2px 0 #a82a22; }
+.btn.blue { background: #2f8cf0; box-shadow: 0 6px 0 #1d5fae; } .btn.blue:active { box-shadow: 0 2px 0 #1d5fae; }
+.btn.alt { background: #edf3f9; color: #3b5470; box-shadow: 0 6px 0 #cfdbe8; height: 50px; font-size: 20px; }
+.how { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 17px; font-weight: 600; color: #3b4f68; }
+.how div { display: flex; align-items: center; gap: 12px; }
+.how i { flex: none; width: 44px; height: 44px; border-radius: 14px; background: #e6f3ff; display: grid; place-items: center; font-style: normal; font-size: 24px; }
+.big { font-size: 72px; font-weight: 700; color: #ff7a1a; line-height: 1; }
+.best { font-size: 18px; font-weight: 600; color: #6f86a6; }
+#home { position: fixed; left: 8px; top: 8px; z-index: 5; width: 40px; height: 40px; border-radius: 13px; background: rgba(255,255,255,.2); display: none; place-items: center; border: 0; cursor: pointer; }
+body.play #home { display: grid; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<button id="home" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7M6 10v9h4v-5h4v5h4v-9"/></svg></button>
+
+<div class="ov" id="menu">
+  <div class="panel">
+    <div style="line-height:0"><svg class="ic" viewBox="0 0 48 48" width="64" height="64" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="#bfe8ff" fill-opacity=".55" stroke="#3fa4ea" stroke-width="3"/><path d="M13 22a11 11 0 0 1 8-9" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/><circle cx="31" cy="32" r="2.5" fill="#fff" opacity=".8"/></svg></div>
+    <h1>Bubble Blaster</h1>
+    <p>Find the bubble with the target number and colour, and shoot it before time runs out!</p>
+    <button class="btn easy" data-m="0">Easy <small>1 min · numbers 1-10</small></button>
+    <button class="btn med" data-m="1">Medium <small>1 min · numbers 1-20</small></button>
+    <button class="btn hard" data-m="2">Hard <small>30 sec · numbers 1-20</small></button>
+  </div>
+</div>
+<div class="ov hidden" id="tut">
+  <div class="panel">
+    <h2>How to play</h2>
+    <div class="how">
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="#ff5a4d"/><circle cx="24" cy="24" r="13" fill="#fff"/><circle cx="24" cy="24" r="7.5" fill="#ff5a4d"/><circle cx="24" cy="24" r="2.5" fill="#fff"/></svg></i><span>The number and colour at the top is your target</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><rect x="18" y="5" width="12" height="26" rx="6" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><rect x="11" y="23" width="26" height="21" rx="9" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><path d="M19 30v8M24 30v8M29 30v8" stroke="#e9b87c" stroke-width="2" stroke-linecap="round"/></svg></i><span>Tap (or click) the bubble with that number and colour</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="#bfe8ff" fill-opacity=".55" stroke="#3fa4ea" stroke-width="3"/><path d="M13 22a11 11 0 0 1 8-9" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/><circle cx="31" cy="32" r="2.5" fill="#fff" opacity=".8"/></svg></i><span>Every shot adds a new bubble, so the sky keeps filling up</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><rect x="19" y="3" width="10" height="6" rx="2" fill="#5b6b82"/><circle cx="24" cy="27" r="17" fill="#fff" stroke="#3b4f68" stroke-width="3"/><path d="M24 27V16M24 27l8 5" stroke="#e0453c" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="27" r="2.5" fill="#3b4f68"/></svg></i><span>Wrong bubble costs you 2 seconds</span></div>
+    </div>
+    <button class="btn easy" id="bGo">Let's go!</button>
+  </div>
+</div>
+<div class="ov hidden" id="over">
+  <div class="panel">
+    <h2>Time's up!</h2>
+    <div class="big" id="oScore">0</div>
+    <p id="oMode"></p>
+    <div class="best" id="oBest"></div>
+    <button class="btn easy" id="bAgain">Play again</button>
+    <button class="btn alt" id="bMenu">Change mode</button>
+  </div>
+</div>
+
+<script>
+/* ---- shared icon set (flat SVG, 48x48) ---- */
+const IC = {
+  tree: '<path d="M21 34h6v10h-6z" fill="#8a5a2b"/><path d="M24 3 40 19H8z" fill="#3bbd54"/><path d="M24 11 43 30H5z" fill="#2fa845"/><path d="M24 19 46 39H2z" fill="#1f8a37"/>',
+  hand: '<rect x="18" y="5" width="12" height="26" rx="6" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><rect x="11" y="23" width="26" height="21" rx="9" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><path d="M19 30v8M24 30v8M29 30v8" stroke="#e9b87c" stroke-width="2" stroke-linecap="round"/>',
+  tile: '<rect x="5" y="7" width="38" height="36" rx="9" fill="#1d7f33"/><rect x="5" y="4" width="38" height="36" rx="9" fill="#42c457"/><rect x="11" y="9" width="26" height="8" rx="4" fill="#fff" opacity=".3"/>',
+  star: '<path d="m24 4 5.8 12.6 13.7 1.6-10.2 9.3 2.8 13.5L24 34l-12.1 7 2.8-13.5L4.5 18.2l13.7-1.6z" fill="#ffc933" stroke="#e39a00" stroke-width="2.5" stroke-linejoin="round"/>',
+  bulb: '<path d="M24 4a14 14 0 0 0-8 25.5V33h16v-3.5A14 14 0 0 0 24 4z" fill="#ffe066" stroke="#e0a800" stroke-width="2.5" stroke-linejoin="round"/><rect x="16" y="34" width="16" height="8" rx="3" fill="#aab6c4"/><path d="M20 15c-2 2-3 4-3 6" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/>',
+  target: '<circle cx="24" cy="24" r="19" fill="#ff5a4d"/><circle cx="24" cy="24" r="13" fill="#fff"/><circle cx="24" cy="24" r="7.5" fill="#ff5a4d"/><circle cx="24" cy="24" r="2.5" fill="#fff"/>',
+  coin: '<circle cx="24" cy="24" r="19" fill="#ffc933" stroke="#e08a00" stroke-width="3"/><circle cx="24" cy="24" r="12" fill="none" stroke="#e08a00" stroke-width="2.5"/><path d="M19 17c3-2 8-1 9 2" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/>',
+  flame: '<path d="M24 3c2 10 15 14 15 28a15 15 0 0 1-30 0c0-7 4-10 7-16 2 4 3 6 4 8 3-6 4-12 4-20z" fill="#ff7a1a"/><path d="M24 22c1 6 8 8 8 16a8 8 0 0 1-16 0c0-4 3-6 4-9 2 2 3 3 4 4 0-3 0-7 0-11z" fill="#ffd04a"/>',
+  shuffle: '<g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14h8c9 0 11 20 20 20h5M5 34h8c3 0 5-2 7-5M26 19c2-3 4-5 7-5h5"/></g><path d="M36 7l8 7-8 7zM36 27l8 7-8 7z" fill="#fff"/>',
+  bubble: '<circle cx="24" cy="24" r="19" fill="#bfe8ff" fill-opacity=".55" stroke="#3fa4ea" stroke-width="3"/><path d="M13 22a11 11 0 0 1 8-9" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/><circle cx="31" cy="32" r="2.5" fill="#fff" opacity=".8"/>',
+  timer: '<rect x="19" y="3" width="10" height="6" rx="2" fill="#5b6b82"/><circle cx="24" cy="27" r="17" fill="#fff" stroke="#3b4f68" stroke-width="3"/><path d="M24 27V16M24 27l8 5" stroke="#e0453c" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="27" r="2.5" fill="#3b4f68"/>',
+  ball: '<circle cx="24" cy="24" r="19" fill="#ff8a2a" stroke="#a84600" stroke-width="2.5"/><g fill="none" stroke="#7a3300" stroke-width="2.5" stroke-linecap="round"><path d="M24 5v38M5 24h38M9 11c8 7 8 19 0 26M39 11c-8 7-8 19 0 26"/></g>',
+  sparkle: '<path d="M22 3l4.5 15.5L42 23l-15.5 4.5L22 43l-4.5-15.5L2 23l15.5-4.5z" fill="#ffd84d" stroke="#f0a800" stroke-width="2" stroke-linejoin="round"/><path d="M38 4l1.8 5.2L45 11l-5.2 1.8L38 18l-1.8-5.2L31 11l5.2-1.8z" fill="#fff3a8"/>',
+  heart: '<path d="M24 42C6 29 3 17 10 10c6-5 12-2 14 3 2-5 8-8 14-3 7 7 4 19-14 32z" fill="#ff4a6a" stroke="#d92a4c" stroke-width="2.5" stroke-linejoin="round"/><path d="M13 16c1-3 3-4 6-4" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".7"/>',
+  bow: '<path d="M13 5c24 8 24 30 0 38" fill="none" stroke="#8a5a2b" stroke-width="4.5" stroke-linecap="round"/><path d="M13 5v38" stroke="#dfe6ee" stroke-width="2"/><path d="M5 24h35" stroke="#5b6b82" stroke-width="3" stroke-linecap="round"/><path d="M44 24l-9-6v12z" fill="#5b6b82"/><path d="M5 24l-3-4M5 24l-3 4M10 24l-3-4M10 24l-3 4" stroke="#ff5a4d" stroke-width="2.5" stroke-linecap="round"/>',
+  rocket: '<path d="M14 28 5 40l11-3zM34 28l9 12-11-3z" fill="#ff5a4d"/><path d="M24 3c10 6 12 20 10 32H14C12 23 14 9 24 3z" fill="#eef3fa" stroke="#9aa8bb" stroke-width="2"/><path d="M24 3c4 3 7 7 8 12H16c1-5 4-9 8-12z" fill="#ff5a4d"/><circle cx="24" cy="23" r="5" fill="#5ec8ff" stroke="#3b7bb0" stroke-width="2"/><path d="M18 38h12l-6 9z" fill="#ffb02e"/>',
+  board: '<g transform="rotate(-32 24 24)"><rect x="2" y="17" width="44" height="14" rx="7" fill="#2e9bd6" stroke="#176a9a" stroke-width="2.5"/><rect x="9" y="21" width="30" height="6" rx="3" fill="#fff" opacity=".35"/><circle cx="14" cy="24" r="2.6" fill="#fff"/><circle cx="34" cy="24" r="2.6" fill="#fff"/></g>',
+  trophy: '<path d="M14 6h20v14c0 8-5 12-10 12s-10-4-10-12z" fill="#ffc933" stroke="#e09b00" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 10H6c0 8 3 12 9 13M34 10h8c0 8-3 12-9 13" fill="none" stroke="#e09b00" stroke-width="3" stroke-linecap="round"/><rect x="21" y="32" width="6" height="6" fill="#e09b00"/><rect x="13" y="38" width="22" height="6" rx="2.5" fill="#e09b00"/><path d="M19 11v9" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>',
+  rope: '<path d="M3 31C12 12 20 42 30 22S40 22 45 17" fill="none" stroke="#a5703a" stroke-width="8" stroke-linecap="round"/><path d="M3 31C12 12 20 42 30 22S40 22 45 17" fill="none" stroke="#d9a566" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 6"/><circle cx="24" cy="26" r="5" fill="#ff4a4a"/>',
+  bolt: '<path d="M28 2 9 27h12l-4 19 22-27H26z" fill="#ffc933" stroke="#e09b00" stroke-width="2.5" stroke-linejoin="round"/>',
+  flag: '<rect x="9" y="4" width="4.5" height="40" rx="2" fill="#6b7a8c"/><path d="M13 7h28l-7 9 7 9H13z" fill="#ff4a4a" stroke="#c92d2d" stroke-width="2" stroke-linejoin="round"/>',
+  cross: '<path d="M10 10l28 28M38 10 10 38" stroke="#2f7bff" stroke-width="9" stroke-linecap="round"/>',
+  ring: '<circle cx="24" cy="24" r="14" fill="none" stroke="#ff9a1c" stroke-width="9"/>',
+  red: '<circle cx="24" cy="24" r="19" fill="#ef4444" stroke="#b91c1c" stroke-width="2.5"/><circle cx="24" cy="24" r="11" fill="none" stroke="#b91c1c" stroke-width="2.5" opacity=".5"/><path d="M13 20a12 12 0 0 1 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>',
+  green: '<circle cx="24" cy="24" r="19" fill="#22c55e" stroke="#15803d" stroke-width="2.5"/><circle cx="24" cy="24" r="11" fill="none" stroke="#15803d" stroke-width="2.5" opacity=".5"/><path d="M13 20a12 12 0 0 1 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>',
+  link: '<rect x="3" y="15" width="25" height="18" rx="9" fill="none" stroke="#3b4f68" stroke-width="5"/><rect x="20" y="15" width="25" height="18" rx="9" fill="none" stroke="#2f7bff" stroke-width="5"/>',
+  down: '<path d="M24 5v28" stroke="#2f7bff" stroke-width="8" stroke-linecap="round"/><path d="M11 24l13 14 13-14" fill="none" stroke="#2f7bff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>',
+  rock: '<path d="M6 34l5-17 13-8 14 6 5 16-9 11H14z" fill="#a3acb7" stroke="#5d6773" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 20l8-5M16 34l8-6 9 3" fill="none" stroke="#6f7a86" stroke-width="2.5" stroke-linecap="round"/><path d="M12 24l4-6" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".5"/>',
+  paper: '<path d="M10 4h20l9 9v31H10z" fill="#fff" stroke="#8a99ad" stroke-width="2.5" stroke-linejoin="round"/><path d="M30 4v9h9" fill="#dfe8f3" stroke="#8a99ad" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 22h17M16 29h17M16 36h11" stroke="#8a99ad" stroke-width="3" stroke-linecap="round"/>',
+  scissors: '<path d="M15 4l16 24M33 4 17 28" stroke="#9aa8bb" stroke-width="5.5" stroke-linecap="round"/><circle cx="14" cy="37" r="7" fill="none" stroke="#ff4a6a" stroke-width="5"/><circle cx="34" cy="37" r="7" fill="none" stroke="#ff4a6a" stroke-width="5"/><circle cx="24" cy="21" r="2.5" fill="#5b6b82"/>',
+  lock: '<path d="M16 22v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#8a6d00" stroke-width="4.5" stroke-linecap="round"/><rect x="9" y="21" width="30" height="22" rx="5" fill="#ffc933" stroke="#e09b00" stroke-width="2.5"/><circle cx="24" cy="30" r="3.5" fill="#8a6d00"/><path d="M24 31v6" stroke="#8a6d00" stroke-width="3.5" stroke-linecap="round"/>',
+  eyes: '<path d="M2 24C9 11 39 11 46 24 39 37 9 37 2 24z" fill="#fff" stroke="#3b4f68" stroke-width="2.5" stroke-linejoin="round"/><circle cx="24" cy="24" r="8.5" fill="#3b7bff"/><circle cx="24" cy="24" r="4" fill="#14213d"/><circle cx="21.5" cy="21.5" r="2" fill="#fff"/>',
+  ban: '<circle cx="24" cy="24" r="17" fill="none" stroke="#e0453c" stroke-width="6"/><path d="M12 12l24 24" stroke="#e0453c" stroke-width="6" stroke-linecap="round"/>',
+  paddle: '<path d="M27 28 40 41" stroke="#9a6a3a" stroke-width="7" stroke-linecap="round"/><circle cx="20" cy="19" r="15" fill="#e0453c" stroke="#9a2a22" stroke-width="2.5"/><path d="M11 12a12 12 0 0 1 8-5" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".5"/><circle cx="39" cy="12" r="5" fill="#fff" stroke="#b9c4d2" stroke-width="2"/>',
+  cube: '<path d="M24 4 42 13v22L24 44 6 35V13z" fill="#ff9a1c" stroke="#b86100" stroke-width="2.5" stroke-linejoin="round"/><path d="M6 13l18 9 18-9M24 22v22" fill="none" stroke="#b86100" stroke-width="2.5"/>',
+  gamepad: '<rect x="3" y="12" width="42" height="25" rx="12" fill="#7b4fe0" stroke="#4b2ba8" stroke-width="2.5"/><path d="M15 19v10M10 24h10" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="32" cy="21" r="2.8" fill="#ffc933"/><circle cx="37" cy="27" r="2.8" fill="#4ade80"/>',
+  dice: '<rect x="5" y="5" width="38" height="38" rx="9" fill="#fff" stroke="#6b5fd6" stroke-width="3"/><g fill="#6b5fd6"><circle cx="15" cy="15" r="3.4"/><circle cx="33" cy="15" r="3.4"/><circle cx="24" cy="24" r="3.4"/><circle cx="15" cy="33" r="3.4"/><circle cx="33" cy="33" r="3.4"/></g>',
+  swap: '<g fill="none" stroke="#6b5fd6" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17h32M30 8l9 9-9 9M42 33H10M18 24l-9 9 9 9"/></g>'
+};
+const _icImgs = {};
+const ic = (k, size) => '<svg class="ic" viewBox="0 0 48 48"' + (size ? ' width="' + size + '" height="' + size + '"' : '') + ' aria-hidden="true">' + IC[k] + '</svg>';
+function icImg(k) { let m = _icImgs[k]; if (!m) { m = _icImgs[k] = new Image(); m.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="96" height="96">' + IC[k] + '</svg>'); } return m; }
+function drawIc(c, k, x, y, size) { const m = icImg(k); if (m.complete && m.naturalWidth) c.drawImage(m, x - size / 2, y - size / 2, size, size); }
+const _icCss = document.createElement('style'); _icCss.textContent = '.ic{vertical-align:-.14em;display:inline-block}.ic:not([width]){width:1em;height:1em}'; document.head.appendChild(_icCss);
+
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const W = 540, H = 960, TOP = 150;
+const cv = $('c'), ctx = cv.getContext('2d');
+let scale = 1;
+function resize() { const s = Math.min(innerWidth / W, innerHeight / H), d = Math.min(devicePixelRatio || 1, 2); scale = s; cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px'; cv.width = W * s * d; cv.height = H * s * d; ctx.setTransform(s * d, 0, 0, s * d, 0, 0); }
+addEventListener('resize', resize); resize();
+
+const MODES = [
+  { n: 'Easy', time: 60, max: 10, count: 26, r: 40 },
+  { n: 'Medium', time: 60, max: 20, count: 30, r: 37 },
+  { n: 'Hard', time: 30, max: 20, count: 30, r: 37 }
+];
+const COLS = [['#ff7eb6', '#d6336c'], ['#74c0fc', '#1c7ed6'], ['#ffd43b', '#f08c00'], ['#69db7c', '#2f9e44'], ['#da77f2', '#9c36b5'], ['#ffa94d', '#e8590c'], ['#63e6be', '#0ca678'], ['#a5d8ff', '#4263eb']];
+
+/* ---------- sound ---------- */
+let ac = null;
+function ctxA() { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); return ac; } catch (e) { return null; } }
+function tone(f, d, t, v, f2) { const a = ctxA(); if (!a) return; const o = a.createOscillator(), g = a.createGain(); o.type = t || 'sine'; o.frequency.value = f; if (f2) o.frequency.exponentialRampToValueAtTime(f2, a.currentTime + d); g.gain.value = v || .06; g.gain.exponentialRampToValueAtTime(.0001, a.currentTime + d); o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + d); }
+function popSound(pitch) {
+  const a = ctxA(); if (!a) return;
+  tone(500 * pitch, .12, 'sine', .12, 120 * pitch);                                   // the "bloop"
+  const len = Math.floor(a.sampleRate * .07), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);   // the "pop" click
+  const s = a.createBufferSource(), g = a.createGain(), f = a.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1200; g.gain.value = .35; s.buffer = buf; s.connect(f).connect(g).connect(a.destination); s.start();
+}
+const sfx = {
+  shoot: () => tone(900, .06, 'square', .03, 300),
+  pop: () => popSound(.9 + Math.random() * .4),
+  wrong: () => { popSound(.6); tone(160, .25, 'sawtooth', .06, 90); },
+  miss: () => tone(200, .08, 'triangle', .04, 120),
+  spawn: () => tone(700 + Math.random() * 200, .08, 'sine', .025, 1100),
+  tick: () => tone(1000, .05, 'square', .04),
+  end: () => [523, 440, 349].forEach((f, i) => setTimeout(() => tone(f, .25, 'triangle', .08), i * 160)),
+  streak: () => { tone(880, .08, 'triangle', .07); setTimeout(() => tone(1320, .14, 'triangle', .07), 70); }
+};
+
+/* ---------- state ---------- */
+let mode = 0, state = 'menu', score = 0, left = 0, target = 1, tcol = null, bubbles = [], parts = [], rings = [], pops = [], streak = 0, shots = 0, hits = 0, t = 0, lastTick = 99, shake = 0;
+const cross = { x: W / 2, y: H / 2 + 100, a: 0, show: false, fire: 0, lastMove: 0 };
+let best = JSON.parse(store.get('bb-best', '[0,0,0]'));
+
+function makeBubble(x, y) {
+  const M = MODES[mode], r = M.r * (.88 + Math.random() * .26), a = Math.random() * 6.283, sp = 24 + Math.random() * 40;
+  return { x: x ?? rnd(r, W - r), y: y ?? rnd(TOP + r, H - r - 10), r, n: 1 + Math.floor(Math.random() * M.max), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, ph: Math.random() * 6.28, c: COLS[Math.floor(Math.random() * COLS.length)], born: 0, pop: 0 };
+}
+const rnd = (a, b) => a + Math.random() * (b - a);
+function pickTarget() { const alive = bubbles.filter(b => !b.pop); if (!alive.length) return; let b; do { b = pick(alive); } while (b.n === target && b.c === tcol && alive.length > 1 && Math.random() < .9); target = b.n; tcol = b.c; }
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function ensureTarget() { if (!bubbles.some(b => !b.pop && b.n === target && b.c === tcol)) pickTarget(); }
+
+function start(m) {
+  mode = m; score = 0; left = MODES[m].time; streak = 0; shots = 0; hits = 0; parts = []; rings = []; pops = []; lastTick = 99;
+  bubbles = []; for (let i = 0; i < MODES[m].count; i++) { const b = makeBubble(); b.born = 1; bubbles.push(b); }
+  target = 0; pickTarget(); state = 'play'; document.body.className = 'play';
+  ['menu', 'tut', 'over'].forEach(i => $(i).classList.add('hidden'));
+}
+function end() {
+  state = 'over'; sfx.end(); document.body.className = '';
+  if (score > best[mode]) { best[mode] = score; store.set('bb-best', JSON.stringify(best)); }
+  $('oScore').textContent = score; $('oMode').textContent = MODES[mode].n + ' · ' + hits + ' hits from ' + shots + ' shots'; $('oBest').textContent = 'Best: ' + best[mode];
+  setTimeout(() => { if (state === 'over') $('over').classList.remove('hidden'); }, 450);
+}
+function toMenu() { state = 'menu'; document.body.className = ''; ['tut', 'over'].forEach(i => $(i).classList.add('hidden')); $('menu').classList.remove('hidden'); bubbles = []; for (let i = 0; i < 16; i++) bubbles.push(makeBubble(rnd(40, W - 40), rnd(40, H - 40))); }
+document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { mode = +b.dataset.m; $('menu').classList.add('hidden'); $('tut').classList.remove('hidden'); });
+$('bGo').onclick = () => start(mode); $('bAgain').onclick = () => { $('over').classList.add('hidden'); $('tut').classList.remove('hidden'); }; $('bMenu').onclick = toMenu; $('home').onclick = toMenu;
+
+/* ---------- input ---------- */
+function pt(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale }; }
+cv.addEventListener('pointermove', e => { const p = pt(e); cross.x = p.x; cross.y = p.y; cross.show = e.pointerType === 'mouse'; cross.lastMove = t; });
+cv.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') cross.show = false; });
+cv.addEventListener('pointerdown', e => { const p = pt(e); cross.x = p.x; cross.y = p.y; cross.show = e.pointerType === 'mouse'; cross.lastMove = t; if (state === 'play') shoot(p.x, p.y); });
+addEventListener('keydown', e => { if (e.key === 'Escape') toMenu(); });
+
+function shoot(x, y) {
+  shots++; cross.fire = 1; sfx.shoot();
+  let hit = null; for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; if (b.pop) continue; if (Math.hypot(b.x - x, b.y - y) <= b.r + 5) { hit = b; break; } }
+  if (!hit) { sfx.miss(); streak = 0; rings.push({ x, y, r: 6, a: .7, c: '#fff' }); }
+  else if (hit.n === target && hit.c === tcol) {
+    hits++; streak++; score += 1 + (streak >= 5 ? 1 : 0); hit.pop = .0001; burst(hit, true); sfx.pop();
+    pops.push({ x: hit.x, y: hit.y - 10, s: streak >= 5 ? '+2' : '+1', c: '#ffe066', a: 1 });
+    if (streak > 0 && streak % 5 === 0) { sfx.streak(); pops.push({ x: W / 2, y: 260, s: streak + ' streak!', c: '#7fe9ff', a: 1.4, big: true }); }
+    pickTarget();
+  } else {
+    streak = 0; hit.pop = .0001; burst(hit, false); sfx.wrong(); left = Math.max(0, left - 2); shake = 8;
+    pops.push({ x: hit.x, y: hit.y - 10, s: '-2s', c: '#ff8a8a', a: 1 });
+    ensureTarget();
+  }
+  // every shot, hit or miss, adds one more bubble somewhere
+  if (bubbles.filter(b => !b.pop).length < 70) { const nb = makeBubble(); nb.born = .0001; bubbles.push(nb); sfx.spawn(); }
+}
+function burst(b, good) {
+  for (let i = 0; i < 16; i++) { const a = Math.random() * 6.283, s = 90 + Math.random() * 260; parts.push({ x: b.x, y: b.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, l: 1, r: 3 + Math.random() * 5, c: good ? b.c[0] : '#ffb4b4' }); }
+  rings.push({ x: b.x, y: b.y, r: b.r, a: .9, c: good ? '#fff' : '#ff9a9a' });
+}
+
+/* ---------- update ---------- */
+function update(dt) {
+  t += dt;
+  const M = MODES[mode];
+  if (state === 'play') {
+    left -= dt; if (left <= 10 && Math.ceil(left) !== lastTick && left > 0) { lastTick = Math.ceil(left); sfx.tick(); } if (left <= 0) { left = 0; end(); }
+  }
+  const speedUp = state === 'play' ? 1 + (1 - left / M.time) * .35 : 1;
+  for (const b of bubbles) {
+    if (b.pop) { b.pop += dt * 6; continue; }
+    b.born = Math.min(1, b.born + dt * 4 || 0); if (b.born >= 1) b.born = 1;
+    b.x += (b.vx + Math.sin(t * 1.3 + b.ph) * 12) * dt * speedUp; b.y += (b.vy + Math.cos(t * 1.1 + b.ph) * 12) * dt * speedUp;
+    const top = (state === 'play' ? TOP : 0) + b.r;
+    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx); } else if (b.x > W - b.r) { b.x = W - b.r; b.vx = -Math.abs(b.vx); }
+    if (b.y < top) { b.y = top; b.vy = Math.abs(b.vy); } else if (b.y > H - b.r) { b.y = H - b.r; b.vy = -Math.abs(b.vy); }
+  }
+  bubbles = bubbles.filter(b => !b.pop || b.pop < 1);
+  // bubbles bounce off each other (equal-density circles, mass ~ r^2)
+  for (let k = 0; k < 2; k++) for (let i = 0; i < bubbles.length; i++) for (let j = i + 1; j < bubbles.length; j++) {
+    const a = bubbles[i], c = bubbles[j]; if (a.pop || c.pop) continue;
+    let dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy), m = a.r + c.r; if (d >= m) continue;
+    if (d < .01) { dx = 1; dy = 0; d = 1; }
+    const nx = dx / d, ny = dy / d, ma = a.r * a.r, mc = c.r * c.r, ov = m - d;
+    a.x -= nx * ov * mc / (ma + mc); a.y -= ny * ov * mc / (ma + mc); c.x += nx * ov * ma / (ma + mc); c.y += ny * ov * ma / (ma + mc);
+    const rv = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
+    if (rv < 0) { const imp = -2 * rv / (1 / ma + 1 / mc); a.vx -= imp * nx / ma; a.vy -= imp * ny / ma; c.vx += imp * nx / mc; c.vy += imp * ny / mc; }
+  }
+  parts.forEach(p => { p.vy += 500 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.l -= dt * 1.8; }); parts = parts.filter(p => p.l > 0);
+  rings.forEach(r => { r.r += 160 * dt; r.a -= dt * 2.4; }); rings = rings.filter(r => r.a > 0);
+  pops.forEach(p => { p.y -= 50 * dt; p.a -= dt * (p.big ? .9 : 1.4); }); pops = pops.filter(p => p.a > 0);
+  cross.fire = Math.max(0, cross.fire - dt * 5); cross.a += dt; shake *= Math.pow(.01, dt);
+}
+
+/* ---------- draw ---------- */
+function bg() {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1e7be8'); g.addColorStop(.55, '#0f4fb4'); g.addColorStop(1, '#0a2f86'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,.07)'; for (let i = 0; i < 12; i++) { const x = (i * 97 + t * 8 * (1 + i % 3 * .3)) % (W + 80) - 40, y = 160 + (i * 211) % 760; ctx.beginPath(); ctx.arc(x, y, 14 + (i % 4) * 8, 0, 6.283); ctx.fill(); }
+  const light = ctx.createRadialGradient(W * .3, -60, 10, W * .3, -60, 520); light.addColorStop(0, 'rgba(255,255,255,.22)'); light.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = light; ctx.fillRect(0, 0, W, H);
+}
+function drawBubble(b) {
+  const sc = b.pop ? 1 + b.pop * .5 : (.3 + .7 * Math.min(1, b.born)), al = b.pop ? Math.max(0, 1 - b.pop) : 1, r = b.r * sc;
+  ctx.save(); ctx.globalAlpha = al; ctx.translate(b.x, b.y);
+  const g = ctx.createRadialGradient(-r * .3, -r * .35, r * .1, 0, 0, r); g.addColorStop(0, b.c[0]); g.addColorStop(1, b.c[1]);
+  ctx.fillStyle = g; ctx.globalAlpha = al * .92; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill();
+  ctx.globalAlpha = al; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.beginPath(); ctx.ellipse(-r * .38, -r * .5, r * .26, r * .13, -.6, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `700 ${Math.round(r * (b.n > 9 ? .86 : 1.05))}px Fredoka, sans-serif`; ctx.strokeText(b.n, 0, r * .05); ctx.fillText(b.n, 0, r * .05);
+  ctx.restore();
+}
+function drawCross() {
+  if (!cross.show || state !== 'play') return;
+  const x = cross.x, y = cross.y, f = cross.fire, r = 30 - f * 8, spin = cross.a * .8;
+  ctx.save(); ctx.translate(x, y); ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 7; ring(r, 0, 0); ctx.stroke(); ticks(r, 0); ctx.stroke();
+  ctx.strokeStyle = f > .3 ? '#ffe066' : '#ff3b3b'; ctx.lineWidth = 3.5; ring(r, 0, 0); ctx.stroke(); ticks(r, 0); ctx.stroke();
+  ctx.rotate(spin); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.setLineDash([6, 10]); ctx.beginPath(); ctx.arc(0, 0, r + 9, 0, 6.283); ctx.stroke(); ctx.setLineDash([]);
+  ctx.rotate(-spin); ctx.fillStyle = '#ff3b3b'; ctx.beginPath(); ctx.arc(0, 0, 3, 0, 6.283); ctx.fill();
+  ctx.restore();
+}
+function ring(r) { ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); }
+function ticks(r) { ctx.beginPath(); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; ctx.moveTo(Math.cos(a) * (r - 12), Math.sin(a) * (r - 12)); ctx.lineTo(Math.cos(a) * (r + 12), Math.sin(a) * (r + 12)); } }
+function hud() {
+  const M = MODES[mode];
+  // timer bar
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; rr(60, 20, W - 120, 22, 11); ctx.fill();
+  const f = Math.max(0, left / M.time); ctx.fillStyle = left <= 10 ? '#ff6b6b' : '#7fe9ff'; if (f > 0) { rr(60, 20, Math.max(22, (W - 120) * f), 22, 11); ctx.fill(); }
+  ctx.fillStyle = '#fff'; ctx.font = '700 22px Fredoka, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(Math.ceil(left) + 's', W - 12, 31);
+  ctx.textAlign = 'left'; ctx.fillText(M.n, 60, 66);
+  // score
+  ctx.textAlign = 'right'; ctx.font = '700 30px Fredoka, sans-serif'; ctx.fillText('Score ' + score, W - 18, 70);
+  // target
+  const pulse = 1 + Math.sin(t * 5) * .04;
+  ctx.save(); ctx.translate(W / 2, 100); ctx.scale(pulse, pulse);
+  ctx.fillStyle = 'rgba(255,255,255,.95)'; rr(-120, -38, 240, 76, 38); ctx.fill();
+  ctx.fillStyle = '#26507a'; ctx.font = '700 26px Fredoka, sans-serif'; ctx.textAlign = 'left'; ctx.fillText('SHOOT', -100, 2);
+  const g = ctx.createRadialGradient(40, -8, 4, 50, 0, 36); g.addColorStop(0, tcol[0]); g.addColorStop(1, tcol[1]); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(60, 0, 32, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 5; ctx.textAlign = 'center'; ctx.font = '700 36px Fredoka, sans-serif'; ctx.strokeText(target, 60, 3); ctx.fillText(target, 60, 3);
+  ctx.restore();
+  if (streak >= 2) { ctx.fillStyle = '#ffe066'; ctx.font = '700 22px Fredoka, sans-serif'; ctx.textAlign = 'center'; const sTx = streak + ' in a row'; ctx.fillText(sTx, W / 2 + 18, 150); drawIc(ctx, 'flame', W / 2 + 18 - ctx.measureText(sTx).width / 2 - 20, 148, 28); }
+}
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function draw() {
+  ctx.save(); if (shake > .4) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+  bg();
+  const sorted = bubbles.slice().sort((a, b) => a.r - b.r); sorted.forEach(drawBubble);
+  // highlight the target bubbles very softly so the player can scan for them
+  parts.forEach(p => { ctx.globalAlpha = Math.max(0, p.l); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); }); ctx.globalAlpha = 1;
+  rings.forEach(r => { ctx.globalAlpha = Math.max(0, r.a); ctx.strokeStyle = r.c; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, 6.283); ctx.stroke(); }); ctx.globalAlpha = 1;
+  pops.forEach(p => { ctx.globalAlpha = Math.min(1, p.a * 1.6); ctx.textAlign = 'center'; ctx.font = `700 ${p.big ? 56 : 40}px Fredoka, sans-serif`; ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.strokeText(p.s, p.x, p.y); ctx.fillStyle = p.c; ctx.fillText(p.s, p.x, p.y); }); ctx.globalAlpha = 1;
+  if (state === 'play') hud();
+  drawCross();
+  ctx.restore();
+}
+let last = performance.now();
+function loop(now) { const dt = Math.min(.033, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); }
+window.__bb = { start, get s() { return { state, score, left, target, n: bubbles.length, shots, hits }; }, shoot, bubbles: () => bubbles, tgt: () => target, tc: () => tcol, setLeft: v => { left = v; } };
+toMenu(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

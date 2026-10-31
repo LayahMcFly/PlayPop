@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Hamster Hideout</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #ffe9d2; font-family: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #6b4a3a; }
+#wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+canvas { display: block; }
+.ov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(90, 50, 30, .45); backdrop-filter: blur(3px); z-index: 10; animation: fade .2s; }
+.ov.hidden { display: none; }
+@keyframes fade { from { opacity: 0; } }
+.panel { width: min(100%, 360px); max-height: 96dvh; overflow: auto; background: #fff; color: #6b4a3a; border-radius: 28px; padding: 22px 20px 24px; text-align: center; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 0 rgba(0,0,0,.14), 0 24px 44px rgba(0,0,0,.3); animation: rise .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes rise { from { transform: translateY(26px) scale(.94); opacity: 0; } }
+.panel h1 { margin: 0; font-size: 42px; line-height: 1; color: #ff6f9c; text-shadow: 0 3px 0 #ffd3e1; }
+.panel h2 { margin: 0; font-size: 34px; color: #ff6f9c; }
+.panel p { margin: 0; font-size: 17px; font-weight: 500; color: #8c6a58; line-height: 1.3; }
+.btn { height: 60px; border-radius: 18px; font-size: 24px; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; border: 0; cursor: pointer; font-family: inherit; }
+.btn:active { transform: translateY(4px); }
+.btn.go { background: #4fc27d; box-shadow: 0 6px 0 #2f9a5a; } .btn.go:active { box-shadow: 0 2px 0 #2f9a5a; }
+.btn.alt { background: #fbeee0; color: #8c5a3c; box-shadow: 0 6px 0 #ecd6bf; height: 50px; font-size: 20px; }
+.btn.hidden { display: none; }
+.how { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 16px; font-weight: 600; color: #6b4a3a; }
+.how div { display: flex; align-items: center; gap: 12px; }
+.how i { flex: none; width: 44px; height: 44px; border-radius: 14px; background: #fff0e0; display: grid; place-items: center; font-style: normal; font-size: 24px; }
+.big { font-size: 60px; font-weight: 700; color: #ff8a3c; line-height: 1; }
+.stars { display: flex; justify-content: center; gap: 6px; }
+.stars svg { width: 58px; height: 58px; }
+.stars svg.off { filter: grayscale(1); opacity: .28; }
+#home { position: fixed; left: 8px; top: 8px; z-index: 5; width: 40px; height: 40px; border-radius: 13px; background: rgba(107,74,58,.14); display: none; place-items: center; border: 0; cursor: pointer; }
+body.play #home { display: grid; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<button id="home" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#6b4a3a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7M6 10v9h4v-5h4v5h4v-9"/></svg></button>
+
+<div class="ov" id="menu">
+  <div class="panel">
+    <div style="line-height:0" id="mLogo"></div>
+    <h1>Hamster Hideout</h1>
+    <p>A hamster is hiding in every colour. Can you find where they all are?</p>
+    <button class="btn go" id="mPlay">Play</button>
+    <button class="btn alt hidden" id="mNew">Start over</button>
+  </div>
+</div>
+<div class="ov hidden" id="tut">
+  <div class="panel">
+    <h2>How to play</h2>
+    <div class="how">
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="#ff5a4d"/><circle cx="24" cy="24" r="13" fill="#fff"/><circle cx="24" cy="24" r="7.5" fill="#ff5a4d"/><circle cx="24" cy="24" r="2.5" fill="#fff"/></svg></i><span>Hide exactly one hamster in every colour.</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><rect x="5" y="7" width="38" height="36" rx="9" fill="#1d7f33"/><rect x="5" y="4" width="38" height="36" rx="9" fill="#42c457"/><rect x="11" y="9" width="26" height="8" rx="4" fill="#fff" opacity=".3"/></svg></i><span>Only one hamster in each row and each column.</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><circle cx="24" cy="24" r="17" fill="none" stroke="#e0453c" stroke-width="6"/><path d="M12 12l24 24" stroke="#e0453c" stroke-width="6" stroke-linecap="round"/></svg></i><span>Hamsters can't touch, not even corner to corner.</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><rect x="18" y="5" width="12" height="26" rx="6" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><rect x="11" y="23" width="26" height="21" rx="9" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><path d="M19 30v8M24 30v8M29 30v8" stroke="#e9b87c" stroke-width="2" stroke-linecap="round"/></svg></i><span>Tap a cell to mark it X. Tap again for a hamster.</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><path d="M24 42C6 29 3 17 10 10c6-5 12-2 14 3 2-5 8-8 14-3 7 7 4 19-14 32z" fill="#ff4a6a" stroke="#d92a4c" stroke-width="2.5" stroke-linejoin="round"/><path d="M13 16c1-3 3-4 6-4" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".7"/></svg></i><span>A wrong hamster costs a seed. Lose all 3 and you try again.</span></div>
+    </div>
+    <button class="btn go" id="tGo">Let's go!</button>
+  </div>
+</div>
+<div class="ov hidden" id="over">
+  <div class="panel">
+    <h2 id="oTitle"></h2>
+    <div class="stars" id="oStars"></div>
+    <p id="oMsg"></p>
+    <button class="btn go" id="oNext">Next level</button>
+    <button class="btn alt" id="oMenu">Menu</button>
+  </div>
+</div>
+
+<script>
+/* ---- shared icon set (flat SVG, 48x48) ---- */
+const IC = {
+  tree: '<path d="M21 34h6v10h-6z" fill="#8a5a2b"/><path d="M24 3 40 19H8z" fill="#3bbd54"/><path d="M24 11 43 30H5z" fill="#2fa845"/><path d="M24 19 46 39H2z" fill="#1f8a37"/>',
+  hand: '<rect x="18" y="5" width="12" height="26" rx="6" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><rect x="11" y="23" width="26" height="21" rx="9" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><path d="M19 30v8M24 30v8M29 30v8" stroke="#e9b87c" stroke-width="2" stroke-linecap="round"/>',
+  tile: '<rect x="5" y="7" width="38" height="36" rx="9" fill="#1d7f33"/><rect x="5" y="4" width="38" height="36" rx="9" fill="#42c457"/><rect x="11" y="9" width="26" height="8" rx="4" fill="#fff" opacity=".3"/>',
+  star: '<path d="m24 4 5.8 12.6 13.7 1.6-10.2 9.3 2.8 13.5L24 34l-12.1 7 2.8-13.5L4.5 18.2l13.7-1.6z" fill="#ffc933" stroke="#e39a00" stroke-width="2.5" stroke-linejoin="round"/>',
+  bulb: '<path d="M24 4a14 14 0 0 0-8 25.5V33h16v-3.5A14 14 0 0 0 24 4z" fill="#ffe066" stroke="#e0a800" stroke-width="2.5" stroke-linejoin="round"/><rect x="16" y="34" width="16" height="8" rx="3" fill="#aab6c4"/><path d="M20 15c-2 2-3 4-3 6" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/>',
+  target: '<circle cx="24" cy="24" r="19" fill="#ff5a4d"/><circle cx="24" cy="24" r="13" fill="#fff"/><circle cx="24" cy="24" r="7.5" fill="#ff5a4d"/><circle cx="24" cy="24" r="2.5" fill="#fff"/>',
+  coin: '<circle cx="24" cy="24" r="19" fill="#ffc933" stroke="#e08a00" stroke-width="3"/><circle cx="24" cy="24" r="12" fill="none" stroke="#e08a00" stroke-width="2.5"/><path d="M19 17c3-2 8-1 9 2" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/>',
+  flame: '<path d="M24 3c2 10 15 14 15 28a15 15 0 0 1-30 0c0-7 4-10 7-16 2 4 3 6 4 8 3-6 4-12 4-20z" fill="#ff7a1a"/><path d="M24 22c1 6 8 8 8 16a8 8 0 0 1-16 0c0-4 3-6 4-9 2 2 3 3 4 4 0-3 0-7 0-11z" fill="#ffd04a"/>',
+  shuffle: '<g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14h8c9 0 11 20 20 20h5M5 34h8c3 0 5-2 7-5M26 19c2-3 4-5 7-5h5"/></g><path d="M36 7l8 7-8 7zM36 27l8 7-8 7z" fill="#fff"/>',
+  bubble: '<circle cx="24" cy="24" r="19" fill="#bfe8ff" fill-opacity=".55" stroke="#3fa4ea" stroke-width="3"/><path d="M13 22a11 11 0 0 1 8-9" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/><circle cx="31" cy="32" r="2.5" fill="#fff" opacity=".8"/>',
+  timer: '<rect x="19" y="3" width="10" height="6" rx="2" fill="#5b6b82"/><circle cx="24" cy="27" r="17" fill="#fff" stroke="#3b4f68" stroke-width="3"/><path d="M24 27V16M24 27l8 5" stroke="#e0453c" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="27" r="2.5" fill="#3b4f68"/>',
+  ball: '<circle cx="24" cy="24" r="19" fill="#ff8a2a" stroke="#a84600" stroke-width="2.5"/><g fill="none" stroke="#7a3300" stroke-width="2.5" stroke-linecap="round"><path d="M24 5v38M5 24h38M9 11c8 7 8 19 0 26M39 11c-8 7-8 19 0 26"/></g>',
+  sparkle: '<path d="M22 3l4.5 15.5L42 23l-15.5 4.5L22 43l-4.5-15.5L2 23l15.5-4.5z" fill="#ffd84d" stroke="#f0a800" stroke-width="2" stroke-linejoin="round"/><path d="M38 4l1.8 5.2L45 11l-5.2 1.8L38 18l-1.8-5.2L31 11l5.2-1.8z" fill="#fff3a8"/>',
+  heart: '<path d="M24 42C6 29 3 17 10 10c6-5 12-2 14 3 2-5 8-8 14-3 7 7 4 19-14 32z" fill="#ff4a6a" stroke="#d92a4c" stroke-width="2.5" stroke-linejoin="round"/><path d="M13 16c1-3 3-4 6-4" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".7"/>',
+  bow: '<path d="M13 5c24 8 24 30 0 38" fill="none" stroke="#8a5a2b" stroke-width="4.5" stroke-linecap="round"/><path d="M13 5v38" stroke="#dfe6ee" stroke-width="2"/><path d="M5 24h35" stroke="#5b6b82" stroke-width="3" stroke-linecap="round"/><path d="M44 24l-9-6v12z" fill="#5b6b82"/><path d="M5 24l-3-4M5 24l-3 4M10 24l-3-4M10 24l-3 4" stroke="#ff5a4d" stroke-width="2.5" stroke-linecap="round"/>',
+  rocket: '<path d="M14 28 5 40l11-3zM34 28l9 12-11-3z" fill="#ff5a4d"/><path d="M24 3c10 6 12 20 10 32H14C12 23 14 9 24 3z" fill="#eef3fa" stroke="#9aa8bb" stroke-width="2"/><path d="M24 3c4 3 7 7 8 12H16c1-5 4-9 8-12z" fill="#ff5a4d"/><circle cx="24" cy="23" r="5" fill="#5ec8ff" stroke="#3b7bb0" stroke-width="2"/><path d="M18 38h12l-6 9z" fill="#ffb02e"/>',
+  board: '<g transform="rotate(-32 24 24)"><rect x="2" y="17" width="44" height="14" rx="7" fill="#2e9bd6" stroke="#176a9a" stroke-width="2.5"/><rect x="9" y="21" width="30" height="6" rx="3" fill="#fff" opacity=".35"/><circle cx="14" cy="24" r="2.6" fill="#fff"/><circle cx="34" cy="24" r="2.6" fill="#fff"/></g>',
+  trophy: '<path d="M14 6h20v14c0 8-5 12-10 12s-10-4-10-12z" fill="#ffc933" stroke="#e09b00" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 10H6c0 8 3 12 9 13M34 10h8c0 8-3 12-9 13" fill="none" stroke="#e09b00" stroke-width="3" stroke-linecap="round"/><rect x="21" y="32" width="6" height="6" fill="#e09b00"/><rect x="13" y="38" width="22" height="6" rx="2.5" fill="#e09b00"/><path d="M19 11v9" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>',
+  rope: '<path d="M3 31C12 12 20 42 30 22S40 22 45 17" fill="none" stroke="#a5703a" stroke-width="8" stroke-linecap="round"/><path d="M3 31C12 12 20 42 30 22S40 22 45 17" fill="none" stroke="#d9a566" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 6"/><circle cx="24" cy="26" r="5" fill="#ff4a4a"/>',
+  bolt: '<path d="M28 2 9 27h12l-4 19 22-27H26z" fill="#ffc933" stroke="#e09b00" stroke-width="2.5" stroke-linejoin="round"/>',
+  flag: '<rect x="9" y="4" width="4.5" height="40" rx="2" fill="#6b7a8c"/><path d="M13 7h28l-7 9 7 9H13z" fill="#ff4a4a" stroke="#c92d2d" stroke-width="2" stroke-linejoin="round"/>',
+  cross: '<path d="M10 10l28 28M38 10 10 38" stroke="#2f7bff" stroke-width="9" stroke-linecap="round"/>',
+  ring: '<circle cx="24" cy="24" r="14" fill="none" stroke="#ff9a1c" stroke-width="9"/>',
+  red: '<circle cx="24" cy="24" r="19" fill="#ef4444" stroke="#b91c1c" stroke-width="2.5"/><circle cx="24" cy="24" r="11" fill="none" stroke="#b91c1c" stroke-width="2.5" opacity=".5"/><path d="M13 20a12 12 0 0 1 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>',
+  green: '<circle cx="24" cy="24" r="19" fill="#22c55e" stroke="#15803d" stroke-width="2.5"/><circle cx="24" cy="24" r="11" fill="none" stroke="#15803d" stroke-width="2.5" opacity=".5"/><path d="M13 20a12 12 0 0 1 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>',
+  link: '<rect x="3" y="15" width="25" height="18" rx="9" fill="none" stroke="#3b4f68" stroke-width="5"/><rect x="20" y="15" width="25" height="18" rx="9" fill="none" stroke="#2f7bff" stroke-width="5"/>',
+  down: '<path d="M24 5v28" stroke="#2f7bff" stroke-width="8" stroke-linecap="round"/><path d="M11 24l13 14 13-14" fill="none" stroke="#2f7bff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>',
+  rock: '<path d="M6 34l5-17 13-8 14 6 5 16-9 11H14z" fill="#a3acb7" stroke="#5d6773" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 20l8-5M16 34l8-6 9 3" fill="none" stroke="#6f7a86" stroke-width="2.5" stroke-linecap="round"/><path d="M12 24l4-6" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".5"/>',
+  paper: '<path d="M10 4h20l9 9v31H10z" fill="#fff" stroke="#8a99ad" stroke-width="2.5" stroke-linejoin="round"/><path d="M30 4v9h9" fill="#dfe8f3" stroke="#8a99ad" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 22h17M16 29h17M16 36h11" stroke="#8a99ad" stroke-width="3" stroke-linecap="round"/>',
+  scissors: '<path d="M15 4l16 24M33 4 17 28" stroke="#9aa8bb" stroke-width="5.5" stroke-linecap="round"/><circle cx="14" cy="37" r="7" fill="none" stroke="#ff4a6a" stroke-width="5"/><circle cx="34" cy="37" r="7" fill="none" stroke="#ff4a6a" stroke-width="5"/><circle cx="24" cy="21" r="2.5" fill="#5b6b82"/>',
+  lock: '<path d="M16 22v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#8a6d00" stroke-width="4.5" stroke-linecap="round"/><rect x="9" y="21" width="30" height="22" rx="5" fill="#ffc933" stroke="#e09b00" stroke-width="2.5"/><circle cx="24" cy="30" r="3.5" fill="#8a6d00"/><path d="M24 31v6" stroke="#8a6d00" stroke-width="3.5" stroke-linecap="round"/>',
+  eyes: '<path d="M2 24C9 11 39 11 46 24 39 37 9 37 2 24z" fill="#fff" stroke="#3b4f68" stroke-width="2.5" stroke-linejoin="round"/><circle cx="24" cy="24" r="8.5" fill="#3b7bff"/><circle cx="24" cy="24" r="4" fill="#14213d"/><circle cx="21.5" cy="21.5" r="2" fill="#fff"/>',
+  ban: '<circle cx="24" cy="24" r="17" fill="none" stroke="#e0453c" stroke-width="6"/><path d="M12 12l24 24" stroke="#e0453c" stroke-width="6" stroke-linecap="round"/>',
+  paddle: '<path d="M27 28 40 41" stroke="#9a6a3a" stroke-width="7" stroke-linecap="round"/><circle cx="20" cy="19" r="15" fill="#e0453c" stroke="#9a2a22" stroke-width="2.5"/><path d="M11 12a12 12 0 0 1 8-5" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".5"/><circle cx="39" cy="12" r="5" fill="#fff" stroke="#b9c4d2" stroke-width="2"/>',
+  cube: '<path d="M24 4 42 13v22L24 44 6 35V13z" fill="#ff9a1c" stroke="#b86100" stroke-width="2.5" stroke-linejoin="round"/><path d="M6 13l18 9 18-9M24 22v22" fill="none" stroke="#b86100" stroke-width="2.5"/>',
+  gamepad: '<rect x="3" y="12" width="42" height="25" rx="12" fill="#7b4fe0" stroke="#4b2ba8" stroke-width="2.5"/><path d="M15 19v10M10 24h10" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="32" cy="21" r="2.8" fill="#ffc933"/><circle cx="37" cy="27" r="2.8" fill="#4ade80"/>',
+  dice: '<rect x="5" y="5" width="38" height="38" rx="9" fill="#fff" stroke="#6b5fd6" stroke-width="3"/><g fill="#6b5fd6"><circle cx="15" cy="15" r="3.4"/><circle cx="33" cy="15" r="3.4"/><circle cx="24" cy="24" r="3.4"/><circle cx="15" cy="33" r="3.4"/><circle cx="33" cy="33" r="3.4"/></g>',
+  swap: '<g fill="none" stroke="#6b5fd6" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17h32M30 8l9 9-9 9M42 33H10M18 24l-9 9 9 9"/></g>'
+};
+const _icImgs = {};
+const ic = (k, size) => '<svg class="ic" viewBox="0 0 48 48"' + (size ? ' width="' + size + '" height="' + size + '"' : '') + ' aria-hidden="true">' + IC[k] + '</svg>';
+function icImg(k) { let m = _icImgs[k]; if (!m) { m = _icImgs[k] = new Image(); m.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="96" height="96">' + IC[k] + '</svg>'); } return m; }
+function drawIc(c, k, x, y, size) { const m = icImg(k); if (m.complete && m.naturalWidth) c.drawImage(m, x - size / 2, y - size / 2, size, size); }
+const _icCss = document.createElement('style'); _icCss.textContent = '.ic{vertical-align:-.14em;display:inline-block}.ic:not([width]){width:1em;height:1em}'; document.head.appendChild(_icCss);
+
+IC.shuffle2='<g fill="none" stroke="#8c5a3c" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M38 24a14 14 0 1 1-4.5-10.3"/><path d="M36 5v10H26"/></g>'; IC.sound='<path d="M6 18h8l10-9v30l-10-9H6z" fill="#8c5a3c"/><path d="M30 17c4 4 4 10 0 14M35 12c7 7 7 17 0 24" fill="none" stroke="#8c5a3c" stroke-width="4" stroke-linecap="round"/>'; IC.mute='<path d="M6 18h8l10-9v30l-10-9H6z" fill="#8c5a3c"/><path d="M31 18l12 12M43 18 31 30" stroke="#e0453c" stroke-width="4.5" stroke-linecap="round"/>';
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const W = 540, H = 960;
+const cv = $('c'), ctx = cv.getContext('2d');
+function resize() { const s = Math.min(innerWidth / W, innerHeight / H), d = Math.min(devicePixelRatio || 1, 2); cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px'; cv.width = Math.round(W * s * d); cv.height = Math.round(H * s * d); ctx.setTransform(s * d, 0, 0, s * d, 0, 0); }
+addEventListener('resize', resize); resize();
+
+/* ---------- art ---------- */
+const FURS = [['#f3b184', '#d98a5a'], ['#b8aaa0', '#6f635c'], ['#e5bd86', '#b9843f'], ['#d9a6a0', '#a8645d']];
+function hamSVG(i) {
+  const f = FURS[i % FURS.length][0], p = FURS[i % FURS.length][1];
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="128" height="128"><g stroke="#6b4a3a" stroke-width="3" stroke-linejoin="round">'
+    + '<circle cx="24" cy="27" r="13" fill="' + f + '"/><circle cx="76" cy="27" r="13" fill="' + f + '"/><circle cx="24" cy="28" r="6.5" fill="#ffb4c4" stroke="none"/><circle cx="76" cy="28" r="6.5" fill="#ffb4c4" stroke="none"/>'
+    + '<ellipse cx="50" cy="57" rx="40" ry="36" fill="' + f + '"/>'
+    + '<path d="M13 63c0-14 16-23 37-23s37 9 37 23c0 14-14 29-37 29S13 77 13 63z" fill="#fff3e4" stroke="none"/>'
+    + '<path d="M44 22c3 7 9 7 12 0 1 9-2 15-6 15s-7-6-6-15z" fill="' + p + '" stroke="none"/>'
+    + '<ellipse cx="50" cy="57" rx="40" ry="36" fill="none"/></g>'
+    + '<ellipse cx="36" cy="54" rx="3.4" ry="4" fill="#4a3228"/><ellipse cx="64" cy="54" rx="3.4" ry="4" fill="#4a3228"/><circle cx="37.2" cy="52.6" r="1.2" fill="#fff"/><circle cx="65.2" cy="52.6" r="1.2" fill="#fff"/>'
+    + '<ellipse cx="26" cy="65" rx="6.5" ry="4.5" fill="#ff9fb8" opacity=".55"/><ellipse cx="74" cy="65" rx="6.5" ry="4.5" fill="#ff9fb8" opacity=".55"/>'
+    + '<ellipse cx="50" cy="61" rx="4" ry="3" fill="#ff8fab"/><path d="M43 68q3.5 4 7 0q3.5 4 7 0" fill="none" stroke="#6b4a3a" stroke-width="2.4" stroke-linecap="round"/>'
+    + '<g stroke="#6b4a3a" stroke-width="1.8" stroke-linecap="round" opacity=".6"><path d="M18 60l-9-2M18 66l-9 3M82 60l9-2M82 66l9 3"/></g></svg>';
+}
+const hamImgs = FURS.map((_, i) => { const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(hamSVG(i)); return im; });
+function ham(x, y, size, v, sc) { const im = hamImgs[v % hamImgs.length]; if (!im.complete || !im.naturalWidth) return; const s = size * (sc || 1); ctx.drawImage(im, x - s / 2, y - s / 2, s, s); }
+$('mLogo').innerHTML = '<span style="display:inline-block;width:96px;height:96px">' + hamSVG(0).replace('width="128" height="128"', 'width="96" height="96"') + '</span>';
+function seed(x, y, s, alive) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-.35); ctx.globalAlpha = alive ? 1 : .28;
+  ctx.fillStyle = alive ? '#e7d3b2' : '#b9a894'; ctx.strokeStyle = '#6b4a3a'; ctx.lineWidth = s * .08; ctx.beginPath(); ctx.ellipse(0, 0, s * .34, s * .5, 0, 0, 6.283); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = alive ? '#9b7a55' : '#8b7b6b'; ctx.lineWidth = s * .06; ctx.lineCap = 'round';
+  for (const dx of [-.14, 0, .14]) { ctx.beginPath(); ctx.moveTo(dx * s, -s * .36); ctx.quadraticCurveTo(dx * s * 1.6, 0, dx * s, s * .36); ctx.stroke(); }
+  ctx.restore();
+}
+
+/* ---------- sound ---------- */
+let ac = null, muted = store.get('hh-mute', '0') === '1';
+function tone(f, d, t, v, f2, delay) { if (muted) return; try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } const o = ac.createOscillator(), g = ac.createGain(), n = ac.currentTime + (delay || 0); o.type = t || 'sine'; o.frequency.setValueAtTime(f, n); if (f2) o.frequency.exponentialRampToValueAtTime(f2, n + d); g.gain.setValueAtTime(v || .06, n); g.gain.exponentialRampToValueAtTime(.0001, n + d); o.connect(g).connect(ac.destination); o.start(n); o.stop(n + d + .02); }
+const sfx = {
+  x: () => tone(300, .07, 'triangle', .07, 220),
+  clear: () => tone(240, .06, 'triangle', .05, 300),
+  place: () => { tone(600, .1, 'sine', .09, 900); tone(900, .12, 'sine', .06, 1300, .06); },
+  wrong: () => { tone(200, .22, 'sawtooth', .06, 110); },
+  hint: () => [700, 880, 1170].forEach((f, i) => tone(f, .12, 'sine', .06, 0, i * .07)),
+  win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, .3, 'triangle', .08, 0, i * .12)),
+  lose: () => [440, 370, 311, 247].forEach((f, i) => tone(f, .3, 'triangle', .07, 0, i * .17))
+};
+
+/* ---------- level generation ---------- */
+function rngFor(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function shuffle(a, rnd) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function randomQueens(n, rnd) {
+  const q = Array(n).fill(-1), used = Array(n).fill(false);
+  function go(r) { if (r === n) return true; for (const c of shuffle([...Array(n).keys()], rnd)) { if (used[c] || (r > 0 && Math.abs(c - q[r - 1]) <= 1)) continue; q[r] = c; used[c] = true; if (go(r + 1)) return true; used[c] = false; } return false; }
+  return go(0) ? q : null;
+}
+function growRegions(n, q, rnd) {
+  const reg = Array.from({ length: n }, () => Array(n).fill(-1)); for (let r = 0; r < n; r++) reg[r][q[r]] = r;
+  for (;;) {
+    const fr = []; for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (reg[r][c] < 0) { const nb = []; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([a, b]) => { const y = r + a, x = c + b; if (y >= 0 && y < n && x >= 0 && x < n && reg[y][x] >= 0) nb.push(reg[y][x]); }); if (nb.length) fr.push([r, c, nb]); }
+    if (!fr.length) break; const [r, c, nb] = fr[Math.floor(rnd() * fr.length)]; reg[r][c] = nb[Math.floor(rnd() * nb.length)];
+  }
+  return reg;
+}
+function countSol(reg, n, limit) {
+  let cnt = 0; const q = Array(n).fill(-1);
+  function go(r, cols, regs) { if (cnt >= limit) return; if (r === n) { cnt++; return; } for (let c = 0; c < n; c++) { const g = reg[r][c]; if ((cols >> c) & 1 || (regs >> g) & 1) continue; if (r > 0 && Math.abs(c - q[r - 1]) <= 1) continue; q[r] = c; go(r + 1, cols | (1 << c), regs | (1 << g)); } }
+  go(0, 0, 0); return cnt;
+}
+const sizeFor = L => Math.min(9, 4 + Math.floor((L - 1) / 3));
+function altSol(reg, n, sol) {
+  const q = Array(n).fill(-1); let found = null;
+  function go(r, cols, regs, diff) { if (found) return; if (r === n) { if (diff) found = q.slice(); return; } for (let c = 0; c < n; c++) { const g = reg[r][c]; if ((cols >> c) & 1 || (regs >> g) & 1) continue; if (r > 0 && Math.abs(c - q[r - 1]) <= 1) continue; q[r] = c; go(r + 1, cols | (1 << c), regs | (1 << g), diff || c !== sol[r]); } }
+  go(0, 0, 0, false); return found;
+}
+function connectedWithout(reg, n, g, sr, sc) {
+  let cnt = 0, start = null; for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (reg[r][c] === g && !(r === sr && c === sc)) { cnt++; if (!start) start = [r, c]; }
+  if (!start) return false; const seen = new Set([start[0] + ',' + start[1]]), stk = [start];
+  while (stk.length) { const [r, c] = stk.pop(); [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([a, b]) => { const y = r + a, x = c + b; if (y >= 0 && y < n && x >= 0 && x < n && reg[y][x] === g && !(y === sr && x === sc) && !seen.has(y + ',' + x)) { seen.add(y + ',' + x); stk.push([y, x]); } }); }
+  return seen.size === cnt;
+}
+function makeUnique(n, rnd) {
+  for (let att = 0; att < 400; att++) {
+    const sol = randomQueens(n, rnd); if (!sol) continue; const reg = growRegions(n, sol, rnd);
+    for (let step = 0; step < 300; step++) {
+      const alt = altSol(reg, n, sol); if (!alt) return { n, reg, sol };
+      let ok = false; for (const r of shuffle([...Array(n).keys()].filter(r => alt[r] !== sol[r]), rnd)) {
+        const c = alt[r], g = reg[r][c], opts = [];
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([a, b]) => { const y = r + a, x = c + b; if (y >= 0 && y < n && x >= 0 && x < n && reg[y][x] !== g) opts.push(reg[y][x]); });
+        if (!opts.length || !connectedWithout(reg, n, g, r, c)) continue;
+        reg[r][c] = opts[Math.floor(rnd() * opts.length)]; ok = true; break;
+      }
+      if (!ok) break;
+    }
+  }
+  return null;
+}
+const cache = {};
+function genLevel(L) {
+  if (cache[L]) return cache[L];
+  const n = sizeFor(L), rnd = rngFor(L * 104729 + 17); let g = makeUnique(n, rnd);
+  if (!g) { const sol = randomQueens(n, rnd); g = { n, reg: growRegions(n, sol, rnd), sol }; }
+  g.colors = shuffle([...Array(9).keys()], rnd).slice(0, n); return (cache[L] = g);
+}
+const PAL = ['#ffd96b', '#8fd4a0', '#8aa7ff', '#ff9ec7', '#c6a3ff', '#ffa05a', '#6fd6d6', '#c5e063', '#ff7b7b'];
+
+/* ---------- state ---------- */
+let level = 1, G = null, st = null, seeds = 3, hints = 2, state = 'menu', t = 0, endT = 0, shakes = [], pops = [], parts = [], flash = [], tip = 0, tipT = 0, wantNew = false, downCell = null;
+const TIPS = ['Tap a cell to mark it X. Tap again for a hamster!', 'No two hamsters can touch, even at the corners.', 'A colour with only one spot left must hold its hamster.', 'Each row and each column holds exactly one hamster.', 'Stuck? A hint places one correct hamster for you.'];
+const GX = 36, GY = 264, GS = 468;
+const cs = () => GS / G.n;
+function save() { store.set('hh-save', JSON.stringify({ level, st, seeds, hints })); }
+function loadSave() { try { const s = JSON.parse(store.get('hh-save', 'null')); if (!s || !s.st) return false; level = s.level; seeds = s.seeds; hints = s.hints; G = genLevel(level); if (s.st.length !== G.n) return false; st = s.st; return true; } catch (e) { return false; } }
+function newLevel(L) { level = L; G = genLevel(L); st = Array.from({ length: G.n }, () => Array(G.n).fill(0)); seeds = 3; hints = 2; shakes = []; pops = []; parts = []; flash = []; tip = 0; save(); }
+const placed = () => st.flat().filter(v => v === 2).length;
+const hasProgress = () => level > 1 || st.flat().some(v => v);
+function blocked(r, c) {
+  if (st[r][c] === 2) return false;
+  for (let a = 0; a < G.n; a++) for (let b = 0; b < G.n; b++) if (st[a][b] === 2 && (a === r || b === c || G.reg[a][b] === G.reg[r][c] || (Math.abs(a - r) <= 1 && Math.abs(b - c) <= 1))) return true;
+  return false;
+}
+function popAt(x, y, s, c) { pops.push({ x, y, s, c, l: 1 }); }
+function burst(x, y, col, n) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = 80 + Math.random() * 200; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 80, l: .7 + Math.random() * .5, r: 3 + Math.random() * 4, c: col || PAL[Math.floor(Math.random() * 9)] }); } }
+function cellXY(r, c) { const s = cs(); return [GX + c * s + s / 2, GY + r * s + s / 2]; }
+
+function setHam(r, c, byHint) {
+  if (G.sol[r] === c) {
+    st[r][c] = 2; byHint ? sfx.hint() : sfx.place(); const [x, y] = cellXY(r, c); burst(x, y, PAL[G.colors[G.reg[r][c]]], 14); flash.push({ r, c, t: 0 });
+    // fill row/col clutter gently (visual only through blocked())
+    if (placed() === G.n) { state = 'won'; endT = 1.5; sfx.win(); for (let i = 0; i < 40; i++) burst(60 + Math.random() * 420, 300 + Math.random() * 300, null, 1); }
+    tip = Math.min(tip + 1, TIPS.length - 1);
+  } else {
+    st[r][c] = 1; seeds--; sfx.wrong(); shakes.push({ r, c, t: 0 }); const [x, y] = cellXY(r, c); popAt(x, y - 20, '-1 seed', '#ff5a5a'); burst(x, y, '#ff8f8f', 10);
+    if (seeds <= 0) { state = 'lost'; endT = 1.1; }
+  }
+  save();
+}
+function tapCell(r, c) {
+  if (state !== 'play') return; const v = st[r][c]; if (v === 2) { /* placed hamsters are locked */ return; }
+  if (v === 0) { st[r][c] = 1; sfx.x(); save(); } else if (v === 1) setHam(r, c, false);
+}
+function longClear(r, c) { if (state === 'play' && st[r][c] === 1) { st[r][c] = 0; sfx.clear(); save(); } }
+function useHint() {
+  if (state !== 'play' || hints <= 0) return;
+  for (let r = 0; r < G.n; r++) if (st[r][G.sol[r]] !== 2) { hints--; setHam(r, G.sol[r], true); return; }
+}
+function restartLevel() { if (state !== 'play') return; st = Array.from({ length: G.n }, () => Array(G.n).fill(0)); seeds = 3; hints = 2; shakes = []; parts = []; flash = []; save(); sfx.clear(); }
+
+/* ---------- flow ---------- */
+function showMenu() { state = 'menu'; document.body.className = ''; ['tut', 'over'].forEach(i => $(i).classList.add('hidden')); $('menu').classList.remove('hidden'); $('mPlay').textContent = hasProgress() ? 'Play · Level ' + level : 'Play'; $('mNew').classList.toggle('hidden', !hasProgress()); }
+function showTut(n) { wantNew = n; $('menu').classList.add('hidden'); $('over').classList.add('hidden'); $('tut').classList.remove('hidden'); }
+function begin() { if (wantNew) newLevel(1); state = 'play'; document.body.className = 'play'; $('tut').classList.add('hidden'); }
+function finish(win) {
+  const sc = seeds; $('oTitle').textContent = win ? 'All found!' : 'Out of seeds!';
+  $('oStars').innerHTML = [0, 1, 2].map(i => '<svg class="' + (win && i < sc ? '' : 'off') + '" viewBox="0 0 48 48">' + IC.star + '</svg>').join(''); $('oStars').style.display = win ? '' : 'none';
+  $('oMsg').textContent = win ? 'Level ' + level + ' complete' + (seeds === 3 ? ' with no mistakes!' : '.') : 'Give this level another go.'; $('oNext').textContent = win ? 'Next level' : 'Try again';
+  if (win) { const b = +store.get('hh-best', '0'); if (level > b) store.set('hh-best', String(level)); newLevel(level + 1); } else newLevel(level);
+  state = win ? 'wonOver' : 'lostOver'; document.body.className = ''; $('over').classList.remove('hidden');
+}
+$('mPlay').onclick = () => showTut(false); $('mNew').onclick = () => showTut(true); $('tGo').onclick = begin;
+$('oNext').onclick = () => { $('over').classList.add('hidden'); showTut(false); }; $('oMenu').onclick = showMenu; $('home').onclick = showMenu;
+
+/* ---------- input ---------- */
+function toGame(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H]; }
+function cellAt(x, y) { if (!G) return null; const s = cs(), c = Math.floor((x - GX) / s), r = Math.floor((y - GY) / s); return (r >= 0 && c >= 0 && r < G.n && c < G.n) ? [r, c] : null; }
+const BTN = { hint: [150, 912], reset: [270, 912], snd: [390, 912] };
+let pressT = 0, lastTap = { r: -1, c: -1, t: 0 };
+cv.addEventListener('pointerdown', e => {
+  if (state !== 'play') return; const [x, y] = toGame(e);
+  for (const k in BTN) if (Math.hypot(x - BTN[k][0], y - BTN[k][1]) < 36) { if (k === 'hint') useHint(); else if (k === 'reset') restartLevel(); else { muted = !muted; store.set('hh-mute', muted ? '1' : '0'); } return; }
+  const c = cellAt(x, y); downCell = c; pressT = performance.now();
+});
+addEventListener('pointerup', e => {
+  if (!downCell || state !== 'play') { downCell = null; return; } const [x, y] = toGame(e), c = cellAt(x, y), d = downCell; downCell = null;
+  if (!c || c[0] !== d[0] || c[1] !== d[1]) return;
+  if (performance.now() - pressT > 450 && st[c[0]][c[1]] === 1) { longClear(c[0], c[1]); return; }
+  tapCell(c[0], c[1]);
+});
+addEventListener('pointercancel', () => { downCell = null; });
+
+/* ---------- update / draw ---------- */
+function update(dt) {
+  t += dt; tipT += dt;
+  shakes.forEach(s => s.t += dt); shakes = shakes.filter(s => s.t < .45); flash.forEach(f => f.t += dt); flash = flash.filter(f => f.t < .5);
+  parts.forEach(p => { p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.l -= dt; }); parts = parts.filter(p => p.l > 0);
+  pops.forEach(p => { p.l -= dt * .8; p.y -= 40 * dt; }); pops = pops.filter(p => p.l > 0);
+  if (state === 'won' || state === 'lost') { endT -= dt; if (endT <= 0) finish(state === 'won'); }
+}
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function txt(s, x, y, size, color, align, stroke) { ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle'; ctx.font = `700 ${size}px Fredoka, sans-serif`; if (stroke) { ctx.lineWidth = 6; ctx.strokeStyle = stroke; ctx.lineJoin = 'round'; ctx.strokeText(s, x, y); } ctx.fillStyle = color; ctx.fillText(s, x, y); }
+const PAWS = Array.from({ length: 16 }, (_, i) => ({ x: (i * 173) % W, y: (i * 251) % H, r: .6 + (i % 4) * .12 }));
+function paw(x, y, s) { ctx.beginPath(); ctx.ellipse(x, y + 4 * s, 9 * s, 7 * s, 0, 0, 6.283); [[-9, -6], [-3, -11], [3, -11], [9, -6]].forEach(([a, b]) => { ctx.moveTo(x + a * s + 3.4 * s, y + b * s); ctx.arc(x + a * s, y + b * s, 3.4 * s, 0, 6.283); }); ctx.fill(); }
+function bg() {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#ffe9d2'); g.addColorStop(1, '#ffd9c4'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; PAWS.forEach((p, i) => { ctx.save(); ctx.translate(p.x, (p.y + t * 6 * (1 + i % 3 * .3)) % (H + 60) - 30); ctx.rotate(Math.sin(i) * .6); paw(0, 0, p.r * 1.4); ctx.restore(); });
+}
+function drawHud() {
+  txt('Level ' + level, 64, 58, 36, '#6b4a3a', 'left'); txt('Find ' + G.n + ' hamsters', 66, 92, 18, '#a1795f', 'left');
+  ctx.fillStyle = '#fff'; rr(268, 34, 124, 62, 31); ctx.fill(); for (let i = 0; i < 3; i++) seed(298 + i * 34, 66, 38, i < seeds);
+  ctx.fillStyle = '#fff'; rr(402, 34, 114, 62, 31); ctx.fill(); ham(432, 66, 50, 0); const pl = placed(); txt(pl + '/' + G.n, 484, 66, 32, pl ? '#3fae6a' : '#a1795f');
+}
+function drawChips() {
+  const ch = [['One hamster', 'per colour'], ['One per row', 'and column'], ['No hamsters', 'touching']];
+  ch.forEach((l, i) => { const x = 24 + i * 163; ctx.fillStyle = '#fff'; rr(x, 134, 153, 82, 20); ctx.fill(); txt(l[0], x + 76.5, 164, 18, '#8c6a58'); txt(l[1], x + 76.5, 190, 18, '#8c6a58'); });
+}
+function drawBoard() {
+  ctx.fillStyle = 'rgba(180,120,90,.28)'; rr(24, 252, 492, 492, 28); ctx.fill();
+  const n = G.n, s = cs(), gap = Math.max(3, 14 / n * 1.2);
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    let x = GX + c * s, y = GY + r * s; const sh = shakes.find(q => q.r === r && q.c === c); if (sh) x += Math.sin(sh.t * 60) * 6 * (1 - sh.t / .45);
+    const col = PAL[G.colors[G.reg[r][c]]], v = st[r][c], fl = flash.find(q => q.r === r && q.c === c);
+    ctx.fillStyle = col; rr(x + gap / 2, y + gap / 2, s - gap, s - gap, s * .16); ctx.fill();
+    if (v !== 2) { ctx.fillStyle = 'rgba(255,255,255,.18)'; rr(x + gap / 2 + 3, y + gap / 2 + 3, s - gap - 6, (s - gap) * .35, s * .12); ctx.fill(); }
+    if (sh) { ctx.fillStyle = `rgba(255,80,80,${.5 * (1 - sh.t / .45)})`; rr(x + gap / 2, y + gap / 2, s - gap, s - gap, s * .16); ctx.fill(); }
+    if (v === 2) { let sc = 1; if (fl) sc = 1 + .25 * Math.sin(Math.min(1, fl.t / .5) * Math.PI); if (state === 'won') sc *= 1 + .1 * Math.sin(t * 10 + r); ctx.fillStyle = 'rgba(255,255,255,.35)'; rr(x + gap / 2, y + gap / 2, s - gap, s - gap, s * .16); ctx.fill(); ham(x + s / 2, y + s / 2, s * .92, G.colors[G.reg[r][c]], sc); }
+    else if (v === 1) { ctx.strokeStyle = 'rgba(80,45,30,.55)'; ctx.lineWidth = Math.max(3, s * .07); ctx.lineCap = 'round'; const d = s * .17; ctx.beginPath(); ctx.moveTo(x + s / 2 - d, y + s / 2 - d); ctx.lineTo(x + s / 2 + d, y + s / 2 + d); ctx.moveTo(x + s / 2 + d, y + s / 2 - d); ctx.lineTo(x + s / 2 - d, y + s / 2 + d); ctx.stroke(); }
+    else if (blocked(r, c)) { ctx.fillStyle = 'rgba(80,45,30,.22)'; ctx.beginPath(); ctx.arc(x + s / 2, y + s / 2, Math.max(3, s * .07), 0, 6.283); ctx.fill(); }
+  }
+}
+function drawBorders() {
+  const n = G.n, s = cs(); ctx.strokeStyle = 'rgba(95,55,35,.55)'; ctx.lineWidth = 3.5; ctx.lineCap = 'round'; ctx.beginPath();
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const x = GX + c * s, y = GY + r * s, pad = s * .12;
+    if (c < n - 1 && G.reg[r][c] !== G.reg[r][c + 1]) { ctx.moveTo(x + s, y + pad); ctx.lineTo(x + s, y + s - pad); }
+    if (r < n - 1 && G.reg[r][c] !== G.reg[r + 1][c]) { ctx.moveTo(x + pad, y + s); ctx.lineTo(x + s - pad, y + s); }
+  }
+  ctx.stroke();
+}
+function drawBottom() {
+  ctx.fillStyle = '#fff'; rr(24, 764, 492, 100, 26); ctx.fill();
+  const msg = TIPS[tip], words = msg.split(' '); let lines = [], cur = ''; words.forEach(w => { const tt = cur ? cur + ' ' + w : w; ctx.font = '600 22px Fredoka, sans-serif'; if (ctx.measureText(tt).width > 440) { lines.push(cur); cur = w; } else cur = tt; }); lines.push(cur);
+  lines.forEach((l, i) => txt(l, 270, 814 + (i - (lines.length - 1) / 2) * 30, 22, '#8c6a58'));
+  const btn = (k, icon, badge, dim) => { const [x, y] = BTN[k]; ctx.globalAlpha = dim ? .5 : 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 32, 0, 6.283); ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#e8cdb6'; ctx.stroke(); drawIc(ctx, icon, x, y + 1, 38); ctx.globalAlpha = 1; if (badge != null) { ctx.fillStyle = '#ff6f9c'; ctx.beginPath(); ctx.arc(x + 24, y - 24, 14, 0, 6.283); ctx.fill(); txt(String(badge), x + 24, y - 23, 17, '#fff'); } };
+  btn('hint', 'bulb', hints, hints <= 0); btn('reset', 'shuffle2', null, false); btn('snd', muted ? 'mute' : 'sound', null, false);
+}
+function draw() {
+  bg(); if (!G) return; drawHud(); drawChips(); drawBoard(); drawBorders(); drawBottom();
+  parts.forEach(p => { ctx.globalAlpha = Math.max(0, Math.min(1, p.l * 1.5)); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); }); ctx.globalAlpha = 1;
+  pops.forEach(p => { ctx.globalAlpha = Math.max(0, Math.min(1, p.l * 1.8)); txt(p.s, p.x, p.y, 30, p.c, 'center', 'rgba(255,255,255,.9)'); }); ctx.globalAlpha = 1;
+}
+let last = performance.now();
+function loop(now) { const dt = Math.min(.033, (now - last) / 1000); last = now; update(dt); draw(); requestAnimationFrame(loop); }
+
+/* ---------- boot ---------- */
+if (!loadSave()) newLevel(1);
+showMenu(); requestAnimationFrame(loop);
+window.__hh = { st: () => ({ state, level, seeds, hints, placed: placed(), n: G.n }), G: () => G, grid: () => st, tap: tapCell, hint: useHint, genLevel, countSol, newLevel, step: update, begin: () => { wantNew = false; begin(); }, cell: cellXY, sizeFor };
+})();
+</script>
+</body>
+</html>
