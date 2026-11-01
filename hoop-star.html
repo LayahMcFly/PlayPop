@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Hoop Star</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1b4a; font-family: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #fff; }
+#wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+canvas { display: block; max-width: 100%; max-height: 100%; }
+.ov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(8, 18, 60, .62); backdrop-filter: blur(3px); z-index: 10; animation: fade .2s; }
+.ov.hidden { display: none; }
+@keyframes fade { from { opacity: 0; } }
+.panel { width: min(100%, 360px); background: #fff; color: #26384c; border-radius: 28px; padding: 24px 22px 26px; text-align: center; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 0 rgba(0,0,0,.18), 0 24px 44px rgba(0,0,0,.35); animation: rise .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes rise { from { transform: translateY(26px) scale(.94); opacity: 0; } }
+.panel h1 { margin: 0; font-size: 46px; line-height: 1; color: #ff7a1a; text-shadow: 0 3px 0 #ffd2a8; }
+.panel h2 { margin: 0; font-size: 36px; color: #1d5fe0; }
+.panel p { margin: 0; font-size: 18px; font-weight: 500; color: #51647a; line-height: 1.3; }
+.big { font-size: 64px; font-weight: 700; color: #ff7a1a; line-height: 1; }
+.best { font-size: 18px; font-weight: 600; color: #6f86a6; }
+.btn { height: 58px; border-radius: 999px; font-size: 26px; font-weight: 700; color: #fff; background: #ff7a1a; box-shadow: 0 6px 0 #c24e00; display: flex; align-items: center; justify-content: center; border: 0; cursor: pointer; font-family: inherit; }
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c24e00; }
+.btn.blue { background: #2f8cf0; box-shadow: 0 6px 0 #1d5fae; } .btn.blue:active { box-shadow: 0 2px 0 #1d5fae; }
+.how { display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 17px; font-weight: 600; color: #3b4f68; }
+.how div { display: flex; align-items: center; gap: 12px; }
+.how i { flex: none; width: 44px; height: 44px; border-radius: 14px; background: #fff1e4; display: grid; place-items: center; font-style: normal; font-size: 24px; }
+#home { position: fixed; left: 10px; top: 10px; z-index: 5; width: 42px; height: 42px; border-radius: 14px; background: rgba(255,255,255,.2); display: grid; place-items: center; border: 0; cursor: pointer; }
+#home:active { transform: scale(.92); }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<button id="home" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7M6 10v9h4v-5h4v5h4v-9"/></svg></button>
+
+<div class="ov" id="menu">
+  <div class="panel">
+    <div style="line-height:0"><svg class="ic" viewBox="0 0 48 48" width="64" height="64" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="#ff8a2a" stroke="#a84600" stroke-width="2.5"/><g fill="none" stroke="#7a3300" stroke-width="2.5" stroke-linecap="round"><path d="M24 5v38M5 24h38M9 11c8 7 8 19 0 26M39 11c-8 7-8 19 0 26"/></g></svg></div>
+    <h1>Hoop Star</h1>
+    <p>The hoop keeps moving, and it gets faster and tighter as you score.</p>
+    <div class="best" id="menuBest"></div>
+    <button class="btn" id="bPlay">Play</button>
+  </div>
+</div>
+<div class="ov hidden" id="tut">
+  <div class="panel">
+    <h2>How to play</h2>
+    <div class="how">
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><rect x="18" y="5" width="12" height="26" rx="6" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><rect x="11" y="23" width="26" height="21" rx="9" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><path d="M19 30v8M24 30v8M29 30v8" stroke="#e9b87c" stroke-width="2" stroke-linecap="round"/></svg></i><span>Drag back from anywhere, then let go to shoot</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="#ff5a4d"/><circle cx="24" cy="24" r="13" fill="#fff"/><circle cx="24" cy="24" r="7.5" fill="#ff5a4d"/><circle cx="24" cy="24" r="2.5" fill="#fff"/></svg></i><span>Time it, because the hoop keeps sliding</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><path d="M22 3l4.5 15.5L42 23l-15.5 4.5L22 43l-4.5-15.5L2 23l15.5-4.5z" fill="#ffd84d" stroke="#f0a800" stroke-width="2" stroke-linejoin="round"/><path d="M38 4l1.8 5.2L45 11l-5.2 1.8L38 18l-1.8-5.2L31 11l5.2-1.8z" fill="#fff3a8"/></svg></i><span>A clean swish is worth 2 points</span></div>
+      <div><i><svg class="ic" viewBox="0 0 48 48" width="26" height="26" aria-hidden="true"><path d="M24 42C6 29 3 17 10 10c6-5 12-2 14 3 2-5 8-8 14-3 7 7 4 19-14 32z" fill="#ff4a6a" stroke="#d92a4c" stroke-width="2.5" stroke-linejoin="round"/><path d="M13 16c1-3 3-4 6-4" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".7"/></svg></i><span>3 misses and the game is over</span></div>
+    </div>
+    <button class="btn" id="bGo">Let's go!</button>
+  </div>
+</div>
+<div class="ov hidden" id="over">
+  <div class="panel">
+    <h2>Game over</h2>
+    <div class="big" id="oScore">0</div>
+    <div class="best" id="oBest"></div>
+    <button class="btn" id="bAgain">Play again</button>
+    <button class="btn blue" id="bMenu">Menu</button>
+  </div>
+</div>
+
+<script>
+/* ---- shared icon set (flat SVG, 48x48) ---- */
+const IC = {
+  tree: '<path d="M21 34h6v10h-6z" fill="#8a5a2b"/><path d="M24 3 40 19H8z" fill="#3bbd54"/><path d="M24 11 43 30H5z" fill="#2fa845"/><path d="M24 19 46 39H2z" fill="#1f8a37"/>',
+  hand: '<rect x="18" y="5" width="12" height="26" rx="6" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><rect x="11" y="23" width="26" height="21" rx="9" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><path d="M19 30v8M24 30v8M29 30v8" stroke="#e9b87c" stroke-width="2" stroke-linecap="round"/>',
+  tile: '<rect x="5" y="7" width="38" height="36" rx="9" fill="#1d7f33"/><rect x="5" y="4" width="38" height="36" rx="9" fill="#42c457"/><rect x="11" y="9" width="26" height="8" rx="4" fill="#fff" opacity=".3"/>',
+  star: '<path d="m24 4 5.8 12.6 13.7 1.6-10.2 9.3 2.8 13.5L24 34l-12.1 7 2.8-13.5L4.5 18.2l13.7-1.6z" fill="#ffc933" stroke="#e39a00" stroke-width="2.5" stroke-linejoin="round"/>',
+  bulb: '<path d="M24 4a14 14 0 0 0-8 25.5V33h16v-3.5A14 14 0 0 0 24 4z" fill="#ffe066" stroke="#e0a800" stroke-width="2.5" stroke-linejoin="round"/><rect x="16" y="34" width="16" height="8" rx="3" fill="#aab6c4"/><path d="M20 15c-2 2-3 4-3 6" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/>',
+  target: '<circle cx="24" cy="24" r="19" fill="#ff5a4d"/><circle cx="24" cy="24" r="13" fill="#fff"/><circle cx="24" cy="24" r="7.5" fill="#ff5a4d"/><circle cx="24" cy="24" r="2.5" fill="#fff"/>',
+  coin: '<circle cx="24" cy="24" r="19" fill="#ffc933" stroke="#e08a00" stroke-width="3"/><circle cx="24" cy="24" r="12" fill="none" stroke="#e08a00" stroke-width="2.5"/><path d="M19 17c3-2 8-1 9 2" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/>',
+  flame: '<path d="M24 3c2 10 15 14 15 28a15 15 0 0 1-30 0c0-7 4-10 7-16 2 4 3 6 4 8 3-6 4-12 4-20z" fill="#ff7a1a"/><path d="M24 22c1 6 8 8 8 16a8 8 0 0 1-16 0c0-4 3-6 4-9 2 2 3 3 4 4 0-3 0-7 0-11z" fill="#ffd04a"/>',
+  shuffle: '<g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14h8c9 0 11 20 20 20h5M5 34h8c3 0 5-2 7-5M26 19c2-3 4-5 7-5h5"/></g><path d="M36 7l8 7-8 7zM36 27l8 7-8 7z" fill="#fff"/>',
+  bubble: '<circle cx="24" cy="24" r="19" fill="#bfe8ff" fill-opacity=".55" stroke="#3fa4ea" stroke-width="3"/><path d="M13 22a11 11 0 0 1 8-9" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/><circle cx="31" cy="32" r="2.5" fill="#fff" opacity=".8"/>',
+  timer: '<rect x="19" y="3" width="10" height="6" rx="2" fill="#5b6b82"/><circle cx="24" cy="27" r="17" fill="#fff" stroke="#3b4f68" stroke-width="3"/><path d="M24 27V16M24 27l8 5" stroke="#e0453c" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="27" r="2.5" fill="#3b4f68"/>',
+  ball: '<circle cx="24" cy="24" r="19" fill="#ff8a2a" stroke="#a84600" stroke-width="2.5"/><g fill="none" stroke="#7a3300" stroke-width="2.5" stroke-linecap="round"><path d="M24 5v38M5 24h38M9 11c8 7 8 19 0 26M39 11c-8 7-8 19 0 26"/></g>',
+  sparkle: '<path d="M22 3l4.5 15.5L42 23l-15.5 4.5L22 43l-4.5-15.5L2 23l15.5-4.5z" fill="#ffd84d" stroke="#f0a800" stroke-width="2" stroke-linejoin="round"/><path d="M38 4l1.8 5.2L45 11l-5.2 1.8L38 18l-1.8-5.2L31 11l5.2-1.8z" fill="#fff3a8"/>',
+  heart: '<path d="M24 42C6 29 3 17 10 10c6-5 12-2 14 3 2-5 8-8 14-3 7 7 4 19-14 32z" fill="#ff4a6a" stroke="#d92a4c" stroke-width="2.5" stroke-linejoin="round"/><path d="M13 16c1-3 3-4 6-4" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".7"/>',
+  bow: '<path d="M13 5c24 8 24 30 0 38" fill="none" stroke="#8a5a2b" stroke-width="4.5" stroke-linecap="round"/><path d="M13 5v38" stroke="#dfe6ee" stroke-width="2"/><path d="M5 24h35" stroke="#5b6b82" stroke-width="3" stroke-linecap="round"/><path d="M44 24l-9-6v12z" fill="#5b6b82"/><path d="M5 24l-3-4M5 24l-3 4M10 24l-3-4M10 24l-3 4" stroke="#ff5a4d" stroke-width="2.5" stroke-linecap="round"/>',
+  rocket: '<path d="M14 28 5 40l11-3zM34 28l9 12-11-3z" fill="#ff5a4d"/><path d="M24 3c10 6 12 20 10 32H14C12 23 14 9 24 3z" fill="#eef3fa" stroke="#9aa8bb" stroke-width="2"/><path d="M24 3c4 3 7 7 8 12H16c1-5 4-9 8-12z" fill="#ff5a4d"/><circle cx="24" cy="23" r="5" fill="#5ec8ff" stroke="#3b7bb0" stroke-width="2"/><path d="M18 38h12l-6 9z" fill="#ffb02e"/>',
+  board: '<g transform="rotate(-32 24 24)"><rect x="2" y="17" width="44" height="14" rx="7" fill="#2e9bd6" stroke="#176a9a" stroke-width="2.5"/><rect x="9" y="21" width="30" height="6" rx="3" fill="#fff" opacity=".35"/><circle cx="14" cy="24" r="2.6" fill="#fff"/><circle cx="34" cy="24" r="2.6" fill="#fff"/></g>',
+  trophy: '<path d="M14 6h20v14c0 8-5 12-10 12s-10-4-10-12z" fill="#ffc933" stroke="#e09b00" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 10H6c0 8 3 12 9 13M34 10h8c0 8-3 12-9 13" fill="none" stroke="#e09b00" stroke-width="3" stroke-linecap="round"/><rect x="21" y="32" width="6" height="6" fill="#e09b00"/><rect x="13" y="38" width="22" height="6" rx="2.5" fill="#e09b00"/><path d="M19 11v9" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>',
+  rope: '<path d="M3 31C12 12 20 42 30 22S40 22 45 17" fill="none" stroke="#a5703a" stroke-width="8" stroke-linecap="round"/><path d="M3 31C12 12 20 42 30 22S40 22 45 17" fill="none" stroke="#d9a566" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 6"/><circle cx="24" cy="26" r="5" fill="#ff4a4a"/>',
+  bolt: '<path d="M28 2 9 27h12l-4 19 22-27H26z" fill="#ffc933" stroke="#e09b00" stroke-width="2.5" stroke-linejoin="round"/>',
+  flag: '<rect x="9" y="4" width="4.5" height="40" rx="2" fill="#6b7a8c"/><path d="M13 7h28l-7 9 7 9H13z" fill="#ff4a4a" stroke="#c92d2d" stroke-width="2" stroke-linejoin="round"/>',
+  cross: '<path d="M10 10l28 28M38 10 10 38" stroke="#2f7bff" stroke-width="9" stroke-linecap="round"/>',
+  ring: '<circle cx="24" cy="24" r="14" fill="none" stroke="#ff9a1c" stroke-width="9"/>',
+  red: '<circle cx="24" cy="24" r="19" fill="#ef4444" stroke="#b91c1c" stroke-width="2.5"/><circle cx="24" cy="24" r="11" fill="none" stroke="#b91c1c" stroke-width="2.5" opacity=".5"/><path d="M13 20a12 12 0 0 1 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>',
+  green: '<circle cx="24" cy="24" r="19" fill="#22c55e" stroke="#15803d" stroke-width="2.5"/><circle cx="24" cy="24" r="11" fill="none" stroke="#15803d" stroke-width="2.5" opacity=".5"/><path d="M13 20a12 12 0 0 1 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>',
+  link: '<rect x="3" y="15" width="25" height="18" rx="9" fill="none" stroke="#3b4f68" stroke-width="5"/><rect x="20" y="15" width="25" height="18" rx="9" fill="none" stroke="#2f7bff" stroke-width="5"/>',
+  down: '<path d="M24 5v28" stroke="#2f7bff" stroke-width="8" stroke-linecap="round"/><path d="M11 24l13 14 13-14" fill="none" stroke="#2f7bff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>',
+  rock: '<path d="M6 34l5-17 13-8 14 6 5 16-9 11H14z" fill="#a3acb7" stroke="#5d6773" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 20l8-5M16 34l8-6 9 3" fill="none" stroke="#6f7a86" stroke-width="2.5" stroke-linecap="round"/><path d="M12 24l4-6" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".5"/>',
+  paper: '<path d="M10 4h20l9 9v31H10z" fill="#fff" stroke="#8a99ad" stroke-width="2.5" stroke-linejoin="round"/><path d="M30 4v9h9" fill="#dfe8f3" stroke="#8a99ad" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 22h17M16 29h17M16 36h11" stroke="#8a99ad" stroke-width="3" stroke-linecap="round"/>',
+  scissors: '<path d="M15 4l16 24M33 4 17 28" stroke="#9aa8bb" stroke-width="5.5" stroke-linecap="round"/><circle cx="14" cy="37" r="7" fill="none" stroke="#ff4a6a" stroke-width="5"/><circle cx="34" cy="37" r="7" fill="none" stroke="#ff4a6a" stroke-width="5"/><circle cx="24" cy="21" r="2.5" fill="#5b6b82"/>',
+  lock: '<path d="M16 22v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#8a6d00" stroke-width="4.5" stroke-linecap="round"/><rect x="9" y="21" width="30" height="22" rx="5" fill="#ffc933" stroke="#e09b00" stroke-width="2.5"/><circle cx="24" cy="30" r="3.5" fill="#8a6d00"/><path d="M24 31v6" stroke="#8a6d00" stroke-width="3.5" stroke-linecap="round"/>',
+  eyes: '<path d="M2 24C9 11 39 11 46 24 39 37 9 37 2 24z" fill="#fff" stroke="#3b4f68" stroke-width="2.5" stroke-linejoin="round"/><circle cx="24" cy="24" r="8.5" fill="#3b7bff"/><circle cx="24" cy="24" r="4" fill="#14213d"/><circle cx="21.5" cy="21.5" r="2" fill="#fff"/>',
+  ban: '<circle cx="24" cy="24" r="17" fill="none" stroke="#e0453c" stroke-width="6"/><path d="M12 12l24 24" stroke="#e0453c" stroke-width="6" stroke-linecap="round"/>',
+  paddle: '<path d="M27 28 40 41" stroke="#9a6a3a" stroke-width="7" stroke-linecap="round"/><circle cx="20" cy="19" r="15" fill="#e0453c" stroke="#9a2a22" stroke-width="2.5"/><path d="M11 12a12 12 0 0 1 8-5" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".5"/><circle cx="39" cy="12" r="5" fill="#fff" stroke="#b9c4d2" stroke-width="2"/>',
+  cube: '<path d="M24 4 42 13v22L24 44 6 35V13z" fill="#ff9a1c" stroke="#b86100" stroke-width="2.5" stroke-linejoin="round"/><path d="M6 13l18 9 18-9M24 22v22" fill="none" stroke="#b86100" stroke-width="2.5"/>',
+  gamepad: '<rect x="3" y="12" width="42" height="25" rx="12" fill="#7b4fe0" stroke="#4b2ba8" stroke-width="2.5"/><path d="M15 19v10M10 24h10" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="32" cy="21" r="2.8" fill="#ffc933"/><circle cx="37" cy="27" r="2.8" fill="#4ade80"/>',
+  dice: '<rect x="5" y="5" width="38" height="38" rx="9" fill="#fff" stroke="#6b5fd6" stroke-width="3"/><g fill="#6b5fd6"><circle cx="15" cy="15" r="3.4"/><circle cx="33" cy="15" r="3.4"/><circle cx="24" cy="24" r="3.4"/><circle cx="15" cy="33" r="3.4"/><circle cx="33" cy="33" r="3.4"/></g>',
+  swap: '<g fill="none" stroke="#6b5fd6" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17h32M30 8l9 9-9 9M42 33H10M18 24l-9 9 9 9"/></g>'
+};
+const _icImgs = {};
+const ic = (k, size) => '<svg class="ic" viewBox="0 0 48 48"' + (size ? ' width="' + size + '" height="' + size + '"' : '') + ' aria-hidden="true">' + IC[k] + '</svg>';
+function icImg(k) { let m = _icImgs[k]; if (!m) { m = _icImgs[k] = new Image(); m.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="96" height="96">' + IC[k] + '</svg>'); } return m; }
+function drawIc(c, k, x, y, size) { const m = icImg(k); if (m.complete && m.naturalWidth) c.drawImage(m, x - size / 2, y - size / 2, size, size); }
+const _icCss = document.createElement('style'); _icCss.textContent = '.ic{vertical-align:-.14em;display:inline-block}.ic:not([width]){width:1em;height:1em}'; document.head.appendChild(_icCss);
+
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+const W = 540, H = 960, G = 1750, BR = 26, RIM_R = 8, BX = W / 2, BY = 810;
+const cv = $('c'), ctx = cv.getContext('2d');
+let scale = 1;
+function resize() {
+  const s = Math.min(innerWidth / W, innerHeight / H), d = Math.min(devicePixelRatio || 1, 2);
+  scale = s; cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px'; cv.width = W * s * d; cv.height = H * s * d; ctx.setTransform(s * d, 0, 0, s * d, 0, 0);
+}
+addEventListener('resize', resize); resize();
+
+/* ---------- sound ---------- */
+let ac = null;
+function beep(f, d, t, v, f2) { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(); o.type = t || 'sine'; o.frequency.value = f; if (f2) o.frequency.exponentialRampToValueAtTime(f2, ac.currentTime + d); g.gain.value = v || .06; g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + d); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + d); } catch (e) {} }
+const sfx = {
+  shoot: () => beep(300, .18, 'sine', .08, 700),
+  rim: () => beep(190, .12, 'triangle', .09),
+  wall: () => beep(140, .07, 'sine', .05),
+  score: () => { beep(660, .1, 'triangle', .08); setTimeout(() => beep(880, .14, 'triangle', .08), 80); },
+  swish: () => { beep(660, .08, 'triangle', .08); setTimeout(() => beep(880, .08, 'triangle', .08), 70); setTimeout(() => beep(1320, .2, 'triangle', .08), 140); },
+  miss: () => beep(260, .3, 'sawtooth', .05, 120)
+};
+
+/* ---------- state ---------- */
+let mode = 'menu', score = 0, lives = 3, best = +store.get('hs-best', 0) || 0, t = 0;
+let ball, hoop, aim = null, parts = [], pops = [], shake = 0, netSway = 0, flashT = 0, streak = 0;
+function diff() { return Math.min(1, score / 30); }
+function newHoop() {
+  hoop = { x: W / 2, dir: Math.random() < .5 ? -1 : 1, base: 300, t: 0, w: 176, y: 300, bob: 0 };
+}
+let frz = false;
+function hoopUpdate(dt) {
+  if (frz) return;
+  const d = diff();
+  const sp = 95 + score * 15 + (score > 20 ? (score - 20) * 6 : 0);              // pixels per second
+  hoop.w = 176 - 76 * d;                                                           // opening shrinks to 100
+  hoop.t += dt;
+  if (score >= 6) { hoop.bob = Math.min(70, 14 + (score - 6) * 4); hoop.y = hoop.base + Math.sin(hoop.t * (1.2 + d * 1.6)) * hoop.bob; } else hoop.y = hoop.base;
+  hoop.x += hoop.dir * Math.min(sp, 560) * dt;
+  const lo = hoop.w / 2 + 38, hi = W - hoop.w / 2 - 38;
+  if (hoop.x < lo) { hoop.x = lo; hoop.dir = 1; } else if (hoop.x > hi) { hoop.x = hi; hoop.dir = -1; }
+  // later on the hoop sometimes turns around without warning
+  if (score >= 12 && Math.random() < dt * (.25 + d * .45)) hoop.dir *= -1;
+}
+function resetBall() { ball = { x: BX, y: BY, vx: 0, vy: 0, rot: 0, live: false, scored: false, touched: false, age: 0, prevY: BY }; }
+function start() {
+  score = 0; lives = 3; streak = 0; parts = []; pops = []; netSway = 0; newHoop(); resetBall(); aim = null; mode = 'play';
+  ['menu', 'tut', 'over'].forEach(i => $(i).classList.add('hidden'));
+}
+function showTut() { mode = 'tut'; $('menu').classList.add('hidden'); $('over').classList.add('hidden'); score = 0; lives = 3; newHoop(); resetBall(); $('tut').classList.remove('hidden'); }
+function toMenu() { mode = 'menu'; $('tut').classList.add('hidden'); $('over').classList.add('hidden'); $('menu').classList.remove('hidden'); $('menuBest').textContent = best ? 'Best: ' + best : ''; newHoop(); resetBall(); }
+function gameOver() {
+  mode = 'over'; if (score > best) { best = score; store.set('hs-best', best); }
+  $('oScore').textContent = score; $('oBest').textContent = 'Best: ' + best; setTimeout(() => { if (mode === 'over') $('over').classList.remove('hidden'); }, 500);
+}
+
+/* ---------- input ---------- */
+function pt(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale }; }
+cv.addEventListener('pointerdown', e => { if (mode !== 'play' || ball.live) return; const p = pt(e); aim = { sx: p.x, sy: p.y, x: p.x, y: p.y }; cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e => { if (!aim) return; const p = pt(e); aim.x = p.x; aim.y = p.y; });
+function release() {
+  if (!aim) return; const v = shotVec(); aim = null;
+  if (!v || v.len < 28) return;
+  ball.vx = v.vx; ball.vy = v.vy; ball.live = true; ball.age = 0; ball.touched = false; ball.scored = false; ball.prevY = ball.y; sfx.shoot();
+}
+cv.addEventListener('pointerup', release); cv.addEventListener('pointercancel', () => { aim = null; });
+function shotVec() {
+  if (!aim) return null;
+  let dx = aim.sx - aim.x, dy = aim.y - aim.sy; if (dy < 8) return { vx: 0, vy: 0, len: 0 };   // must pull back (down)
+  const len = Math.hypot(dx, dy), cap = Math.min(len, 230), k = 6.6 * cap / len;
+  return { vx: dx * k, vy: -dy * k, len };
+}
+addEventListener('keydown', e => { if (e.key === 'Escape') toMenu(); });
+
+/* ---------- physics ---------- */
+function popText(x, y, s, c) { pops.push({ x, y, s, c, a: 1, vy: -60 }); }
+function burst(x, y, n, cols) { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, s = 80 + Math.random() * 280; parts.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 120, l: 1, c: cols[i % cols.length], r: 3 + Math.random() * 4 }); } }
+function rimHit(cx, cy) {
+  const dx = ball.x - cx, dy = ball.y - cy, d = Math.hypot(dx, dy), m = BR + RIM_R;
+  if (d >= m || d === 0) return;
+  const nx = dx / d, ny = dy / d; ball.x = cx + nx * m; ball.y = cy + ny * m;
+  const vn = ball.vx * nx + ball.vy * ny; if (vn < 0) { ball.vx -= 1.62 * vn * nx; ball.vy -= 1.62 * vn * ny; }
+  ball.touched = true; sfx.rim(); shake = 4; burst(cx, cy, 4, ['#ffb066', '#fff']);
+}
+function step(dt) {
+  t += dt; hoopUpdate(dt); netSway *= Math.pow(.02, dt); shake *= Math.pow(.003, dt); flashT = Math.max(0, flashT - dt);
+  if (ball.live) {
+    ball.age += dt; ball.prevY = ball.y;
+    ball.vy += G * dt; ball.x += ball.vx * dt; ball.y += ball.vy * dt; ball.rot += ball.vx * dt * .02;
+    if (ball.x < BR) { ball.x = BR; ball.vx = Math.abs(ball.vx) * .72; sfx.wall(); } else if (ball.x > W - BR) { ball.x = W - BR; ball.vx = -Math.abs(ball.vx) * .72; sfx.wall(); }
+    const hx = hoop.x, hy = hoop.y, half = hoop.w / 2;
+    rimHit(hx - half, hy); rimHit(hx + half, hy);
+    if (!ball.scored && ball.vy > 0 && ball.prevY < hy && ball.y >= hy && Math.abs(ball.x - hx) < half - 6) {
+      ball.scored = true; const swish = !ball.touched;
+      const pts = swish ? 2 : 1; score += pts; streak++; netSway = 1; flashT = .4; swish ? sfx.swish() : sfx.score();
+      popText(hx, hy - 40, swish ? 'SWISH! +2' : '+1', swish ? '#ffe066' : '#fff'); burst(hx, hy + 20, swish ? 26 : 14, swish ? ['#ffe066', '#ff9d1c', '#fff'] : ['#fff', '#ffb066']);
+      if (streak >= 3) popText(hx, hy - 90, streak + ' in a row!', '#7fe9ff');
+    }
+    const out = ball.y > H + 80, longShot = ball.age > 6;
+    if (mode === 'play' && (out || longShot || (ball.scored && ball.y > hy + 220))) {
+      if (!ball.scored) { lives--; streak = 0; sfx.miss(); popText(Math.max(80, Math.min(W - 80, ball.x)), H - 120, 'Miss', '#ff8a8a'); if (lives <= 0) { gameOver(); } }
+      if (mode === 'play') resetBall();
+    }
+  } else { ball.y = BY + Math.sin(t * 3) * 3; }
+  parts.forEach(p => { p.vy += 900 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.l -= dt * 1.6; }); parts = parts.filter(p => p.l > 0);
+  pops.forEach(p => { p.y += p.vy * dt; p.a -= dt * .9; }); pops = pops.filter(p => p.a > 0);
+}
+
+/* ---------- drawing ---------- */
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function drawBg() {
+  const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#1d5fe0'); g.addColorStop(.62, '#0e3a9a'); g.addColorStop(1, '#0a2670'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // crowd lights
+  for (let i = 0; i < 14; i++) { const x = (i * 83 + 20) % W, y = 80 + (i * 137) % 520, a = .08 + .1 * (.5 + .5 * Math.sin(t * 1.4 + i)); ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.beginPath(); ctx.arc(x, y, 3 + (i % 3), 0, 6.283); ctx.fill(); }
+  // court
+  const fl = ctx.createLinearGradient(0, 860, 0, H); fl.addColorStop(0, '#d98a3d'); fl.addColorStop(1, '#a8601f'); ctx.fillStyle = fl; ctx.fillRect(0, 880, W, H - 880);
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 880); ctx.lineTo(W, 880); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W / 2, 960, 120, Math.PI, 0); ctx.stroke();
+}
+function drawBall(x, y, rot, r) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const g = ctx.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r); g.addColorStop(0, '#ffa04a'); g.addColorStop(1, '#e0640e');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = '#7a3206'; ctx.lineWidth = 2.6; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.moveTo(0, -r); ctx.lineTo(0, r); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-r * 1.15, 0, r * .78, -1, 1); ctx.moveTo(r * 1.15, 0); ctx.arc(r * 1.15, 0, r * .78, Math.PI - 1, Math.PI + 1); ctx.stroke();
+  ctx.restore();
+}
+function drawHoopBack() {
+  const hx = hoop.x, hy = hoop.y, half = hoop.w / 2;
+  // pole glow when scoring
+  if (flashT > 0) { ctx.fillStyle = `rgba(255,224,102,${flashT})`; ctx.beginPath(); ctx.arc(hx, hy - 60, 120, 0, 6.283); ctx.fill(); }
+  ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 6;
+  ctx.fillStyle = '#fff'; rr(hx - half - 28, hy - 150, hoop.w + 56, 126, 12); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = '#d9e4f5'; ctx.lineWidth = 5; rr(hx - half - 28, hy - 150, hoop.w + 56, 126, 12); ctx.stroke();
+  ctx.strokeStyle = '#ff5a3c'; ctx.lineWidth = 5; rr(hx - 38, hy - 78, 76, 54, 6); ctx.stroke();
+}
+function drawHoopFront() {
+  const hx = hoop.x, hy = hoop.y, half = hoop.w / 2, sw = netSway * 10 * Math.sin(t * 30);
+  // net
+  ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2.4;
+  const bot = hy + 78, nw = half * .62;
+  for (let i = 0; i <= 6; i++) { const f = i / 6, x0 = hx - half + f * half * 2, x1 = hx - nw + f * nw * 2 + sw; ctx.beginPath(); ctx.moveTo(x0, hy); ctx.lineTo(x1, bot); ctx.stroke(); }
+  for (let j = 1; j <= 4; j++) { const f = j / 5, y = hy + f * 78, w2 = half - (half - nw) * f; ctx.beginPath(); ctx.moveTo(hx - w2 + sw * f, y); for (let i = 1; i <= 6; i++) ctx.lineTo(hx - w2 + (i / 6) * w2 * 2 + sw * f, y + (i % 2 ? 6 : 0)); ctx.stroke(); }
+  // rim
+  ctx.strokeStyle = '#ff5a1f'; ctx.lineWidth = 9; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(hx - half, hy); ctx.lineTo(hx + half, hy); ctx.stroke();
+  ctx.fillStyle = '#ff7a3d'; [-1, 1].forEach(s => { ctx.beginPath(); ctx.arc(hx + s * half, hy, RIM_R, 0, 6.283); ctx.fill(); });
+}
+function trajectory() {
+  const v = shotVec(); if (!v || v.len < 28) return;
+  const d = diff(), keep = score >= 10 ? 8 : score >= 5 ? 16 : 26;       // the preview shrinks as you improve
+  let x = ball.x, y = ball.y, vx = v.vx, vy = v.vy;
+  for (let i = 0; i < keep; i++) {
+    for (let k = 0; k < 3; k++) { vy += G * .016 / 3 * 1; x += vx * .016 / 3; y += vy * .016 / 3; }
+    if (x < BR || x > W - BR) vx *= -.72;
+    ctx.fillStyle = `rgba(255,255,255,${.85 - i / keep * .6})`; ctx.beginPath(); ctx.arc(x, y, 6 - i / keep * 3, 0, 6.283); ctx.fill();
+  }
+}
+function drawHUD() {
+  ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.font = '700 96px Fredoka, sans-serif'; ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 8; ctx.fillText(score, W / 2, 130); ctx.shadowBlur = 0;
+  for (let i = 0; i < 3; i++) { ctx.globalAlpha = i < lives ? 1 : .25; drawIc(ctx, 'heart', W - 46 - i * 46, 48, 38); } ctx.globalAlpha = 1;
+  const sp = Math.min(560, 95 + score * 15 + (score > 20 ? (score - 20) * 6 : 0)); ctx.font = '600 22px Fredoka, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.textAlign = 'left';
+  ctx.fillText('Speed ' + (sp / 95).toFixed(1) + 'x', 66, 40 + 12);
+}
+function draw() {
+  ctx.save(); if (shake > .3) ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake);
+  drawBg(); drawHoopBack();
+  if (aim && !ball.live) trajectory();
+  // ball shadow
+  if (!ball.live) { ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(ball.x, 884, 30, 8, 0, 0, 6.283); ctx.fill(); }
+  drawBall(ball.x, ball.y, ball.rot, BR);
+  drawHoopFront();
+  parts.forEach(p => { ctx.globalAlpha = Math.max(0, p.l); ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); }); ctx.globalAlpha = 1;
+  pops.forEach(p => { ctx.globalAlpha = Math.min(1, p.a * 1.5); ctx.textAlign = 'center'; ctx.font = '700 44px Fredoka, sans-serif'; ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.strokeText(p.s, p.x, p.y); ctx.fillStyle = p.c; ctx.fillText(p.s, p.x, p.y); }); ctx.globalAlpha = 1;
+  if (mode === 'play' || mode === 'over') drawHUD();
+  if (mode === 'play' && !ball.live && !aim && score === 0 && lives === 3) { ctx.textAlign = 'center'; ctx.font = '600 28px Fredoka, sans-serif'; ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillText('Drag back and let go', W / 2, 700 + Math.sin(t * 4) * 6); }
+  ctx.restore();
+}
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(.033, (now - last) / 1000); last = now;
+  if (mode === 'play' || mode === 'over' || mode === 'menu' || mode === 'tut') { if (mode === 'menu' || mode === 'tut') { t += dt; hoopUpdate(dt * .6); } else step(dt); }
+  draw(); requestAnimationFrame(loop);
+}
+$('bPlay').onclick = showTut; $('bGo').onclick = start; $('bAgain').onclick = showTut; $('bMenu').onclick = toMenu; $('home').onclick = toMenu;
+window.__hs = { freeze: b => { frz = b; }, get s() { return { mode, score, lives, ball: { ...ball }, hoop: { ...hoop } }; }, start, setScore: n => { score = n; }, shootAt: (vx, vy) => { ball.vx = vx; ball.vy = vy; ball.live = true; ball.age = 0; ball.touched = false; ball.scored = false; ball.prevY = ball.y; }, aimShot: () => {
+  // find a launch that drops through the hoop (used only for testing): brute force a few trial shots
+  for (let vx = -700; vx <= 700; vx += 4) for (let vy = -1500; vy <= -1000; vy += 6) { let x = ball.x, y = ball.y, a = vx, b = vy, hit = false, px = y; for (let i = 0; i < 400; i++) { b += G * .005; x += a * .005; px = y; y += b * .005; if (b > 0 && px < hoop.y && y >= hoop.y) { hit = Math.abs(x - hoop.x) < 20; break; } if (y > H) break; } if (hit) return { vx, vy }; }
+  return null; } };
+toMenu(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

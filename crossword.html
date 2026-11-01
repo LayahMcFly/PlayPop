@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Crossword Pop</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --clue: #cfe3f7; --clueD: #b4cfec; --cell: #f4f9ff; --line: #8fb0d2; --ink: #17365d; --sel: #ffd451; --word: #fff0b3;
+  --bad: #e5484d; --good: #1f9d6a; --purple: #7b4fc4; --purpleD: #5a3794; --teal: #0e9f94; --tealD: #0a7d75;
+  --bg1: #eaf4fd; --bg2: #dbeafb;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+html, body { margin: 0; height: 100%; overflow: hidden; font-family: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif; color: var(--ink); background: linear-gradient(180deg, var(--bg1), var(--bg2)); }
+button { font: inherit; border: 0; cursor: pointer; color: inherit; background: none; padding: 0; }
+#app { height: 100%; max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; padding: 8px 8px max(8px, env(safe-area-inset-bottom)); }
+
+/* header */
+#top { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 44px; flex: none; font-weight: 600; font-size: 18px; }
+#top .l, #top .r { display: flex; align-items: center; gap: 10px; }
+#home { width: 38px; height: 38px; border-radius: 12px; background: #fff; box-shadow: 0 3px 0 #bfd2e8; display: grid; place-items: center; }
+#home:active { transform: translateY(2px); box-shadow: 0 1px 0 #bfd2e8; }
+#lvl { color: #0f5fa8; font-weight: 700; }
+#lvl small { font-weight: 600; color: #5d7da0; margin-left: 4px; }
+#prog { background: #fff; border-radius: 12px; padding: 4px 10px; font-size: 15px; color: #3e5f86; box-shadow: 0 2px 0 #bfd2e8; }
+#time { min-width: 58px; text-align: right; font-variant-numeric: tabular-nums; color: #51698a; }
+
+/* board */
+#scroller { flex: 1 1 auto; min-height: 120px; width: 100%; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 4px 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+#scroller::-webkit-scrollbar { display: none; }
+#board { position: relative; display: grid; border: 3px solid #5f8dc0; border-radius: 10px; background: var(--line); gap: 1px; box-shadow: 0 8px 0 rgba(63,109,168,.18), 0 14px 26px rgba(30,60,110,.16); margin: auto; flex: none; }
+.c { position: relative; background: var(--cell); display: grid; place-items: center; font-weight: 700; color: var(--ink); cursor: pointer; overflow: visible; }
+.c.k { background: var(--clue); cursor: pointer; }
+.c.x { background: var(--clue); cursor: default; }
+.c.x::after { content: ''; width: 34%; height: 34%; border-radius: 50%; background: rgba(255,255,255,.55); }
+.c.k.hl { background: #a7ccf2; }
+.c.w.inword { background: var(--word); }
+.c.w.sel { background: var(--sel); box-shadow: inset 0 0 0 3px #f0a800; z-index: 2; }
+.c.w.bad .ch { color: var(--bad); }
+.c.w.hinted .ch { color: var(--teal); }
+.c.w.ok { background: #d7f5e4; }
+.c.w.ok.sel { background: var(--sel); }
+.ch { line-height: 1; pointer-events: none; }
+.c.w.pop .ch { animation: letter .22s; }
+@keyframes letter { 0% { transform: scale(.4); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+.c.w.flash { animation: wflash .7s; }
+@keyframes wflash { 35% { background: #9be8bd; transform: scale(1.1); z-index: 3; } }
+.c.w.shake { animation: shake .3s; }
+@keyframes shake { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+/* clue cells */
+.cl { position: absolute; left: 0; right: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: 600; text-transform: uppercase; line-height: 1.05; color: #1d3b5f; padding: 0 3px; overflow: hidden; word-break: keep-all; pointer-events: none; }
+.cl.top { top: 0; }
+.cl.bot { bottom: 0; }
+.cl.full { top: 0; bottom: 0; }
+.cl.split { border-bottom: 1px solid #a2c0e0; }
+.cl.on { background: rgba(255,212,81,.55); }
+.cl svg { width: 78%; height: 78%; display: block; }
+.ar { position: absolute; width: 0; height: 0; z-index: 3; pointer-events: none; }
+.ar.r { right: -6px; border-top: 5.5px solid transparent; border-bottom: 5.5px solid transparent; border-left: 7px solid #4f86c2; transform: translateY(-50%); }
+.ar.d { bottom: -6px; border-left: 5.5px solid transparent; border-right: 5.5px solid transparent; border-top: 7px solid #4f86c2; transform: translateX(-50%); }
+
+/* clue bar */
+#bar { width: 100%; flex: none; min-height: 46px; margin-top: 6px; background: #fff; border-radius: 14px; box-shadow: 0 3px 0 #bfd2e8; display: flex; align-items: center; gap: 10px; padding: 6px 12px; }
+#bar .dir { flex: none; width: 28px; height: 28px; border-radius: 9px; background: #4f86c2; display: grid; place-items: center; }
+#bar .dir svg { width: 16px; height: 16px; }
+#bar .txt { flex: 1; font-weight: 600; font-size: 17px; line-height: 1.1; color: #1d3b5f; text-transform: uppercase; }
+#bar .len { flex: none; font-size: 13px; color: #7d97b8; font-weight: 600; }
+#bar .pic { flex: none; width: 34px; height: 34px; }
+#bar .pic svg { width: 100%; height: 100%; }
+#bar.empty .txt { color: #8aa3c2; text-transform: none; font-weight: 500; }
+
+/* tools */
+#tools { width: 100%; flex: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.tool { position: relative; height: 44px; border-radius: 14px; background: var(--purple); color: #fff; box-shadow: 0 4px 0 var(--purpleD); display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 15px; font-weight: 600; }
+.tool svg { width: 20px; height: 20px; }
+.tool:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--purpleD); }
+.tool.teal { background: var(--teal); box-shadow: 0 4px 0 var(--tealD); } .tool.teal:active { box-shadow: 0 1px 0 var(--tealD); }
+.tool.pink { background: #e0406f; box-shadow: 0 4px 0 #a82a50; } .tool.pink:active { box-shadow: 0 1px 0 #a82a50; }
+.tool .badge { position: absolute; right: -4px; top: -7px; min-width: 22px; height: 22px; border-radius: 11px; background: #ff9d1c; color: #fff; font-size: 13px; display: grid; place-items: center; box-shadow: 0 2px 0 #c46a00; padding: 0 5px; }
+.tool.off { opacity: .45; }
+
+/* keyboard */
+#kb { width: 100%; flex: none; margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.row { display: flex; justify-content: center; gap: 5px; }
+.key { flex: 1 1 0; max-width: 46px; height: clamp(38px, 5.6dvh, 48px); border-radius: 10px; background: #fff; box-shadow: 0 3px 0 #bfd2e8; font-size: 21px; font-weight: 600; color: #17365d; display: grid; place-items: center; }
+.key:active { transform: translateY(2px); box-shadow: 0 1px 0 #bfd2e8; background: #f1f7ff; }
+.key.wide { flex: 1.5 1 0; max-width: 70px; background: #ffe1e8; color: #c0345a; }
+.key svg { width: 22px; height: 22px; }
+
+/* coach */
+#coach { position: fixed; inset: 0; z-index: 8; display: none; }
+#coach.on { display: block; }
+#hole { position: absolute; border-radius: 14px; box-shadow: 0 0 0 4px #fff, 0 0 0 9999px rgba(15, 35, 70, .66); pointer-events: none; transition: all .25s; }
+#bubble { position: absolute; left: 50%; transform: translateX(-50%); width: min(86vw, 340px); background: #fff; border-radius: 20px; padding: 14px 18px 12px; font-weight: 600; font-size: 18px; line-height: 1.25; color: #26384c; box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 16px 30px rgba(0,0,0,.25); animation: rise .25s both; }
+#bubble b { color: #0f5fa8; }
+#bubble small { display: block; margin-top: 8px; color: #8aa0b8; font-size: 13px; font-weight: 600; }
+
+/* overlays */
+.ov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(15, 40, 80, .5); backdrop-filter: blur(3px); z-index: 10; padding: 16px; animation: fade .2s; }
+.ov.hidden { display: none; }
+@keyframes fade { from { opacity: 0; } }
+.panel { background: #fff; border-radius: 26px; padding: 24px 24px 26px; width: min(100%, 390px); max-height: 94dvh; overflow: auto; text-align: center; box-shadow: 0 10px 0 rgba(0,0,0,.14), 0 24px 44px rgba(0,0,0,.28); display: flex; flex-direction: column; gap: 12px; animation: rise .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes rise { from { transform: translateY(24px) scale(.94); opacity: 0; } }
+.panel h1 { margin: 0; font-size: 44px; line-height: 1; color: #0f5fa8; }
+.panel h2 { margin: 0; font-size: 36px; color: #0f5fa8; }
+.panel p { margin: 0; font-size: 18px; color: #51647a; font-weight: 500; }
+.panel .big { font-size: 40px; font-weight: 700; color: var(--ink); }
+.stars { font-size: 54px; letter-spacing: 6px; color: #ffc21a; text-shadow: 0 4px 0 #c88a00; line-height: 1; }
+.stars i { color: #d3dde9; text-shadow: none; font-style: normal; }
+.btn { height: 56px; border-radius: 18px; font-size: 24px; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: center; padding: 0 20px; }
+.btn:active { transform: translateY(4px); }
+.b-blue { background: #2f8cf0; box-shadow: 0 6px 0 #1d5fae; } .b-blue:active { box-shadow: 0 2px 0 #1d5fae; }
+.b-green { background: #36b86b; box-shadow: 0 6px 0 #1f8a45; } .b-green:active { box-shadow: 0 2px 0 #1f8a45; }
+.b-ghost { background: #edf3f9; color: #3b5470; box-shadow: 0 6px 0 #cfdbe8; font-size: 20px; height: 48px; } .b-ghost:active { box-shadow: 0 2px 0 #cfdbe8; }
+.logo { display: grid; grid-template-columns: repeat(4, 30px); grid-template-rows: repeat(3, 30px); gap: 3px; margin: 0 auto 2px; }
+.logo i { background: #fff; border: 2px solid #8fb0d2; border-radius: 6px; font-style: normal; font-weight: 700; color: #17365d; display: grid; place-items: center; font-size: 18px; }
+.logo i.k { background: #cfe3f7; border-color: #cfe3f7; color: #4f86c2; font-size: 14px; }
+.logo i.y { background: #ffd451; border-color: #f0a800; }
+
+/* level grid */
+#levels { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.lv { height: 82px; border-radius: 18px; color: #fff; text-align: left; padding: 8px 14px; box-shadow: 0 6px 0 rgba(0,0,0,.2); position: relative; display: flex; flex-direction: column; justify-content: center; }
+.lv:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.2); }
+.lv b { font-size: 30px; line-height: 1; }
+.lv span { font-size: 14px; font-weight: 600; opacity: .95; margin-top: 2px; }
+.lv .st { position: absolute; right: 10px; top: 8px; font-size: 16px; letter-spacing: 1px; color: #ffe27a; text-shadow: 0 1px 0 rgba(0,0,0,.25); }
+.lv .st i { color: rgba(255,255,255,.4); font-style: normal; }
+.lv.lock { background: #9fb3c6 !important; box-shadow: 0 6px 0 #7a8da0 !important; pointer-events: none; }
+.lv.lock::after { content: ''; position: absolute; right: 18px; top: 50%; width: 22px; height: 16px; margin-top: -2px; background: #51657a; border-radius: 4px; }
+.lv.lock::before { content: ''; position: absolute; right: 22px; top: 22px; width: 14px; height: 14px; border: 4px solid #51657a; border-bottom: 0; border-radius: 10px 10px 0 0; }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 20; overflow: hidden; }
+#confetti i { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 3px; animation: fall linear forwards; }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <div class="l"><button id="home" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#3b5470" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7M6 10v9h4v-5h4v5h4v-9"/></svg></button><span id="lvl">Level 1</span></div>
+    <div class="r"><span id="prog">0/0</span><span id="time">00 : 00</span></div>
+  </div>
+  <div id="scroller"><div id="board"></div></div>
+  <div id="bar" class="empty"><span class="dir"></span><span class="txt">Tap a square to begin</span></div>
+  <div id="tools">
+    <button class="tool pink" id="tCheck"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Check</button>
+    <button class="tool" id="tHint"><span class="badge" id="hintN">3</span><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>Hint</button>
+    <button class="tool teal" id="tWord"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13M12 6l6 6-6 6M20 5v14"/></svg>Next</button>
+  </div>
+  <div id="kb"></div>
+</div>
+
+<div id="coach"><div id="hole"></div><div id="bubble"></div></div>
+
+<div class="ov" id="menu">
+  <div class="panel">
+    <div class="logo"><i class="k">&#9654;</i><i class="y">C</i><i>A</i><i>T</i><i>S</i><i class="k">&#9660;</i><i>U</i><i class="k">&#9654;</i><i>N</i><i>O</i><i>W</i><i class="k">&#9660;</i></div>
+    <h1>Crossword Pop</h1>
+    <p>Arrows show where each answer starts. Fill in the words!</p>
+    <button class="btn b-blue" id="bCont" style="display:none">Continue</button>
+    <button class="btn b-green" id="bPlay">Play</button>
+  </div>
+</div>
+<div class="ov hidden" id="lvlScr">
+  <div class="panel">
+    <h2>Pick a level</h2>
+    <div id="levels"></div>
+    <button class="btn b-ghost" id="bLvBack">Back</button>
+  </div>
+</div>
+<div class="ov hidden" id="win">
+  <div class="panel">
+    <h2>Solved!</h2>
+    <div class="stars" id="winStars"></div>
+    <p id="winD"></p>
+    <div class="big" id="winT"></div>
+    <p id="winBest"></p>
+    <button class="btn b-green" id="bNext">Next level</button>
+    <button class="btn b-blue" id="bAgain">Play again</button>
+    <button class="btn b-ghost" id="bWinMenu">Levels</button>
+  </div>
+</div>
+<div id="confetti"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+const PICS = {
+  cat: '<path d="M10 24L14 6l14 10zM54 24L50 6 36 16z" fill="#f0a04b"/><circle cx="32" cy="36" r="22" fill="#f0a04b"/><path d="M12 14l4 8-6 2zM52 14l-4 8 6 2z" fill="#ffb3b3"/><path d="M24 20q-2 6 2 8M40 20q2 6-2 8M32 18v7" stroke="#d9822b" stroke-width="3" stroke-linecap="round" fill="none"/><ellipse cx="24" cy="36" rx="3.2" ry="4.2" fill="#2b2b2b"/><ellipse cx="40" cy="36" rx="3.2" ry="4.2" fill="#2b2b2b"/><path d="M29 43h6l-3 4z" fill="#ff6f91"/><path d="M32 47q-4 5-9 2M32 47q4 5 9 2" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M8 38l11 3M8 46l11-2M56 38l-11 3M56 46l-11-2" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>',
+  dog: '<path d="M8 22q-6 20 6 30 6-4 4-20zM56 22q6 20-6 30-6-4-4-20z" fill="#8a5a2b"/><ellipse cx="32" cy="34" rx="19" ry="22" fill="#e0aa72"/><ellipse cx="32" cy="44" rx="11" ry="8" fill="#f6dcb8"/><circle cx="24" cy="30" r="3.4" fill="#2b2b2b"/><circle cx="40" cy="30" r="3.4" fill="#2b2b2b"/><ellipse cx="32" cy="40" rx="5" ry="3.6" fill="#2b2b2b"/><path d="M32 43v5M27 48q5 3 10 0" stroke="#2b2b2b" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M29 49q3 7 6 0z" fill="#ff6f91"/>',
+  sun: '<circle cx="32" cy="32" r="13" fill="#ffc21a"/><path d="M32 6v9M32 49v9M6 32h9M49 32h9M13.6 13.6l6.4 6.4M44 44l6.4 6.4M13.6 50.4l6.4-6.4M44 20l6.4-6.4" stroke="#ffb02e" stroke-width="4.5" stroke-linecap="round"/><circle cx="27.5" cy="29" r="1.8" fill="#b36a00"/><circle cx="36.5" cy="29" r="1.8" fill="#b36a00"/><path d="M27 35q5 5 10 0" stroke="#b36a00" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  moon: '<path d="M42 8a25 25 0 1 0 14 40A21 21 0 0 1 42 8z" fill="#ffd84d"/><circle cx="24" cy="30" r="3" fill="#e5b82e"/><circle cx="30" cy="44" r="4" fill="#e5b82e"/><path d="M52 14l1.6 3.4 3.4 1.6-3.4 1.6L52 24l-1.6-3.4L47 19l3.4-1.6z" fill="#ffd84d"/>',
+  star: '<path d="M32 5l8 18 19 2-14 13 4 19-17-10-17 10 4-19L5 25l19-2z" fill="#ffc21a" stroke="#f29b00" stroke-width="2.5" stroke-linejoin="round"/><circle cx="27" cy="33" r="1.8" fill="#b36a00"/><circle cx="37" cy="33" r="1.8" fill="#b36a00"/><path d="M28 39q4 3.4 8 0" stroke="#b36a00" stroke-width="2" fill="none" stroke-linecap="round"/>',
+  heart: '<path d="M32 57S6 40 6 22a13 13 0 0 1 26-3 13 13 0 0 1 26 3c0 18-26 35-26 35z" fill="#ff4d6d"/><path d="M14 20q2-6 8-6" stroke="#ff9db0" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
+  tree: '<rect x="28" y="40" width="8" height="19" rx="2" fill="#8a5a2b"/><circle cx="32" cy="26" r="19" fill="#3fa34d"/><circle cx="21" cy="35" r="12" fill="#37923f"/><circle cx="43" cy="35" r="12" fill="#37923f"/><circle cx="26" cy="20" r="3" fill="#6fcf7a"/><circle cx="40" cy="28" r="2.4" fill="#6fcf7a"/>',
+  fish: '<path d="M46 32l14-13v26z" fill="#2f8fd8"/><ellipse cx="28" cy="32" rx="21" ry="14" fill="#38a8e8"/><path d="M22 18q6-6 12 0z" fill="#2f8fd8"/><path d="M22 46q6 6 12 0z" fill="#2f8fd8"/><circle cx="16" cy="29" r="4" fill="#fff"/><circle cx="15" cy="29" r="2" fill="#222"/><path d="M26 22q4 10 0 20M33 23q4 9 0 18" stroke="#6bc4f5" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
+  bird: '<path d="M10 30L2 24l2 12z" fill="#2f7fd8"/><ellipse cx="30" cy="36" rx="19" ry="15" fill="#4aa3f0"/><circle cx="43" cy="24" r="11" fill="#4aa3f0"/><path d="M51 22l10 4-10 4z" fill="#ff9d1c"/><circle cx="45" cy="22" r="3" fill="#fff"/><circle cx="46" cy="22" r="1.6" fill="#222"/><path d="M18 36q8-12 20 0q-8 10-20 0z" fill="#2f7fd8"/><path d="M26 50v8M34 50v8M22 58h8M30 58h8" stroke="#ff9d1c" stroke-width="2.6" stroke-linecap="round"/>',
+  house: '<rect x="12" y="30" width="40" height="28" fill="#f4c27a"/><path d="M5 33L32 8l27 25z" fill="#e0533d"/><rect x="27" y="40" width="10" height="18" rx="1.5" fill="#8a5a2b"/><rect x="16" y="36" width="8" height="8" fill="#bfe6ff" stroke="#fff" stroke-width="1.6"/><rect x="40" y="36" width="8" height="8" fill="#bfe6ff" stroke="#fff" stroke-width="1.6"/><rect x="42" y="12" width="6" height="12" fill="#b04030"/>',
+  car: '<path d="M8 40v-6q0-4 4-5l8-1 8-10h18l8 10 6 1q4 1 4 5v6z" fill="#e8453c"/><path d="M26 27l5-8h12l5 8z" fill="#bfe6ff"/><circle cx="18" cy="42" r="8" fill="#2b2b2b"/><circle cx="46" cy="42" r="8" fill="#2b2b2b"/><circle cx="18" cy="42" r="3.4" fill="#bbb"/><circle cx="46" cy="42" r="3.4" fill="#bbb"/><rect x="55" y="33" width="5" height="4" rx="1" fill="#ffe14d"/>',
+  book: '<rect x="12" y="8" width="40" height="48" rx="4" fill="#3b82d6"/><rect x="17" y="8" width="3" height="48" fill="#2a64ae"/><rect x="24" y="16" width="22" height="6" rx="2" fill="#fff"/><rect x="24" y="27" width="16" height="3.4" rx="1.7" fill="#bfd8f5"/><rect x="24" y="34" width="20" height="3.4" rx="1.7" fill="#bfd8f5"/><path d="M42 8v14l4-3 4 3V8z" fill="#ff9d1c"/>',
+  key: '<circle cx="19" cy="19" r="12" fill="none" stroke="#f2b21a" stroke-width="7"/><path d="M28 28l26 26M44 44l7-7M38 50l6-6" stroke="#f2b21a" stroke-width="7" stroke-linecap="round" fill="none"/>',
+  apple: '<path d="M32 21c-8-7-24-2-24 15 0 13 9 23 15 23 4 0 4-2 9-2s5 2 9 2c6 0 15-10 15-23 0-17-16-22-24-15z" fill="#e8453c"/><path d="M32 21c0-5 2-9 5-12" stroke="#7a4a1f" stroke-width="3.6" stroke-linecap="round" fill="none"/><path d="M36 14q10-8 17 0q-8 7-17 0z" fill="#4cb85a"/><path d="M16 32q2-7 8-9" stroke="#ff8c84" stroke-width="3.4" fill="none" stroke-linecap="round"/>',
+  bee: '<ellipse cx="22" cy="20" rx="10" ry="14" fill="#cfeaff" stroke="#9cc7ee" stroke-width="2" transform="rotate(-20 22 20)"/><ellipse cx="40" cy="20" rx="10" ry="14" fill="#cfeaff" stroke="#9cc7ee" stroke-width="2" transform="rotate(20 40 20)"/><ellipse cx="32" cy="38" rx="20" ry="15" fill="#ffc21a"/><path d="M24 25v26M33 24v28M42 27v22" stroke="#2b2b2b" stroke-width="5" stroke-linecap="round"/><circle cx="14" cy="36" r="2.6" fill="#2b2b2b"/><path d="M52 38l9 2-9 2z" fill="#2b2b2b"/>',
+  cow: '<path d="M10 20L6 8M54 20l4-12" stroke="#f1e6c8" stroke-width="5" stroke-linecap="round"/><path d="M6 24q-4 8 6 10zM58 24q4 8-6 10z" fill="#222"/><rect x="12" y="14" width="40" height="38" rx="14" fill="#fff" stroke="#d9d9d9" stroke-width="2"/><path d="M14 18q10-6 16 2q-4 8-14 6z" fill="#2b2b2b"/><path d="M52 34q-8-2-8 8 8 4 8-8z" fill="#2b2b2b"/><ellipse cx="32" cy="44" rx="14" ry="10" fill="#ffb3b3"/><circle cx="26" cy="44" r="2.4" fill="#a8565b"/><circle cx="38" cy="44" r="2.4" fill="#a8565b"/><circle cx="23" cy="30" r="3" fill="#222"/><circle cx="41" cy="30" r="3" fill="#222"/>',
+  pig: '<path d="M10 14l10 6-8 8zM54 14L44 20l8 8z" fill="#ff9db0"/><circle cx="32" cy="34" r="23" fill="#ffb3c1"/><ellipse cx="32" cy="40" rx="11" ry="8" fill="#ff8fa3"/><circle cx="28" cy="40" r="2.2" fill="#a83a5a"/><circle cx="36" cy="40" r="2.2" fill="#a83a5a"/><circle cx="22" cy="28" r="3" fill="#2b2b2b"/><circle cx="42" cy="28" r="3" fill="#2b2b2b"/>',
+  egg: '<path d="M32 6C20 6 12 26 12 38a20 20 0 0 0 40 0C52 26 44 6 32 6z" fill="#fff7e6" stroke="#e0c9a0" stroke-width="2.6"/><path d="M20 30q2-8 7-12" stroke="#fff" stroke-width="4" stroke-linecap="round" fill="none"/><circle cx="38" cy="44" r="2" fill="#f0dcb4"/><circle cx="28" cy="48" r="1.6" fill="#f0dcb4"/>',
+  hat: '<ellipse cx="32" cy="46" rx="27" ry="8" fill="#c0392b"/><path d="M14 46q-2-24 18-26q20 2 18 26z" fill="#e8453c"/><path d="M15 40q17 6 34 0v-6q-17 6-34 0z" fill="#ffd24a"/><circle cx="32" cy="18" r="3.4" fill="#ffd24a"/>',
+  cup: '<path d="M46 22h4a9 9 0 0 1 0 18h-6" fill="none" stroke="#3b82d6" stroke-width="5"/><path d="M12 18h34l-4 34a7 7 0 0 1-7 6H23a7 7 0 0 1-7-6z" fill="#fff" stroke="#3b82d6" stroke-width="4"/><path d="M14 28h30" stroke="#3b82d6" stroke-width="3"/><path d="M22 6q-4 5 0 9M31 4q-4 5 0 10M40 6q-4 5 0 9" stroke="#b9c9dc" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
+  boat: '<path d="M32 8v32" stroke="#6b4a2b" stroke-width="3.4"/><path d="M35 10v28h19z" fill="#fff" stroke="#c9d6e6" stroke-width="2"/><path d="M29 16v22H13z" fill="#ffd24a" stroke="#e5b82e" stroke-width="2"/><path d="M6 41h52l-9 15H15z" fill="#e0533d"/><path d="M2 60q6-5 12 0t12 0 12 0 12 0 12 0" stroke="#4aa3f0" stroke-width="3.4" fill="none" stroke-linecap="round"/>',
+  clock: '<circle cx="32" cy="32" r="25" fill="#fff" stroke="#3b82d6" stroke-width="5"/><path d="M32 12v5M32 47v5M12 32h5M47 32h5" stroke="#3b82d6" stroke-width="3" stroke-linecap="round"/><path d="M32 32V19M32 32l10 6" stroke="#2b2b2b" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="32" r="3" fill="#e8453c"/>',
+  flower: '<path d="M32 36v24" stroke="#3fa34d" stroke-width="4.4" stroke-linecap="round"/><path d="M32 52q12-8 16 0q-10 5-16 0z" fill="#4cb85a"/><g fill="#ff6fa8"><circle cx="32" cy="14" r="9"/><circle cx="49" cy="26" r="9"/><circle cx="43" cy="45" r="9"/><circle cx="21" cy="45" r="9"/><circle cx="15" cy="26" r="9"/></g><circle cx="32" cy="32" r="9" fill="#ffc21a"/>',
+  kite: '<path d="M32 4l22 24-22 26L10 28z" fill="#e8453c"/><path d="M32 4v50M10 28h44" stroke="#fff" stroke-width="2.2"/><path d="M32 4l22 24H32z" fill="#ffc21a"/><path d="M32 54q-8 4-2 8t-2 6" stroke="#4aa3f0" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M26 58l-6-3 2 6zM34 62l6-2-4 5z" fill="#4aa3f0"/>',
+  ball: '<circle cx="32" cy="32" r="25" fill="#ff6a4d"/><path d="M12 18q22 10 40 0M8 36q24 12 48 0" stroke="#fff" stroke-width="4" fill="none"/><path d="M32 7v50" stroke="#ffd24a" stroke-width="4"/><circle cx="24" cy="22" r="4" fill="#ff9d86"/>',
+  lion: '<circle cx="32" cy="32" r="28" fill="#d9801a"/><circle cx="32" cy="34" r="19" fill="#ffc65c"/><circle cx="16" cy="18" r="6" fill="#ffc65c"/><circle cx="48" cy="18" r="6" fill="#ffc65c"/><circle cx="24" cy="30" r="3" fill="#2b2b2b"/><circle cx="40" cy="30" r="3" fill="#2b2b2b"/><path d="M27 38h10l-5 6z" fill="#7a3a2b"/><path d="M32 44q-6 6-11 1M32 44q6 6 11 1" stroke="#7a3a2b" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+  frog: '<ellipse cx="32" cy="40" rx="25" ry="18" fill="#4cc15a"/><circle cx="19" cy="22" r="10" fill="#4cc15a"/><circle cx="45" cy="22" r="10" fill="#4cc15a"/><circle cx="19" cy="21" r="6.4" fill="#fff"/><circle cx="45" cy="21" r="6.4" fill="#fff"/><circle cx="20" cy="22" r="3.2" fill="#222"/><circle cx="44" cy="22" r="3.2" fill="#222"/><path d="M14 44q18 14 36 0" stroke="#2c8a3a" stroke-width="3.4" fill="none" stroke-linecap="round"/><circle cx="26" cy="36" r="1.6" fill="#2c8a3a"/><circle cx="38" cy="36" r="1.6" fill="#2c8a3a"/>',
+  duck: '<ellipse cx="28" cy="42" rx="22" ry="15" fill="#ffd84d"/><path d="M6 36q-4 4 0 10l8-4z" fill="#ffd84d"/><circle cx="44" cy="22" r="12" fill="#ffd84d"/><path d="M53 22q10 1 9 6-8 1-12-2z" fill="#ff9d1c"/><circle cx="46" cy="19" r="2.8" fill="#222"/><path d="M16 42q8-10 20 0q-8 8-20 0z" fill="#f2b92a"/>',
+  cake: '<ellipse cx="32" cy="54" rx="26" ry="5" fill="#d9e3f0"/><rect x="10" y="32" width="44" height="22" rx="5" fill="#f6b26b"/><path d="M10 38q4 8 9 0t9 0 9 0 9 0 8 0v-6a5 5 0 0 0-5-5H15a5 5 0 0 0-5 5z" fill="#ff9ec4"/><rect x="29.5" y="14" width="5" height="14" rx="1.6" fill="#4aa3f0"/><path d="M32 4q5 5 0 9q-5-4 0-9z" fill="#ffc21a"/><circle cx="20" cy="46" r="2" fill="#fff"/><circle cx="44" cy="46" r="2" fill="#fff"/>',
+  bus: '<rect x="5" y="12" width="54" height="36" rx="8" fill="#ffc21a"/><rect x="10" y="18" width="12" height="12" rx="2" fill="#bfe6ff"/><rect x="26" y="18" width="12" height="12" rx="2" fill="#bfe6ff"/><rect x="42" y="18" width="12" height="12" rx="2" fill="#bfe6ff"/><rect x="5" y="36" width="54" height="4" fill="#e5a500"/><circle cx="18" cy="49" r="7" fill="#2b2b2b"/><circle cx="46" cy="49" r="7" fill="#2b2b2b"/><circle cx="18" cy="49" r="3" fill="#bbb"/><circle cx="46" cy="49" r="3" fill="#bbb"/>',
+  train: '<rect x="8" y="24" width="30" height="22" rx="3" fill="#3b82d6"/><rect x="38" y="14" width="18" height="32" rx="3" fill="#e8453c"/><rect x="42" y="18" width="10" height="10" rx="1.6" fill="#bfe6ff"/><rect x="12" y="12" width="9" height="12" fill="#2b2b2b"/><path d="M6 12h15" stroke="#2b2b2b" stroke-width="4"/><circle cx="18" cy="50" r="7" fill="#2b2b2b"/><circle cx="34" cy="50" r="7" fill="#2b2b2b"/><circle cx="50" cy="50" r="6" fill="#2b2b2b"/><path d="M4 56h56" stroke="#8a8f99" stroke-width="3"/><circle cx="12" cy="8" r="3.4" fill="#d6dde8"/><circle cx="20" cy="4" r="2.6" fill="#e3e9f2"/>'
+};
+
+const PUZZLES = [[{"R":7,"C":5,"cells":[{"k":"x"},{"k":"c","d":{"x":"Get scorched","n":4}},{"k":"c","d":{"x":"Just like","n":2}},{"k":"c","d":{"x":"To exist","n":2}},{"k":"x"},{"k":"c","a":{"x":"Tiny tot","n":4}},{"k":"w","l":"B"},{"k":"w","l":"A"},{"k":"w","l":"B"},{"k":"w","l":"Y"},{"k":"c","a":{"x":"Employ","n":3}},{"k":"w","l":"U"},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Greek letter after alpha","n":4}},{"k":"x"},{"k":"w","l":"R"},{"k":"c","d":{"x":"Night bird that hoots","n":3}},{"k":"c","d":{"x":"Look at","n":3}},{"k":"w","l":"B"},{"k":"c","a":{"x":"Used for smelling","n":4}},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","a":{"x":"Not dry","n":3}},{"k":"w","l":"W"},{"k":"w","l":"E"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Earnest request","n":4}},{"k":"w","l":"P"},{"k":"w","l":"L"},{"k":"w","l":"E"},{"k":"w","l":"A"}],"words":["AS","BABY","BE","BETA","BURN","NOSE","OWL","PLEA","SEE","USE","WET"]},{"R":7,"C":5,"cells":[{"k":"x"},{"k":"x"},{"k":"c","d":{"x":"Employ","n":3}},{"k":"c","d":{"x":"Switched on","n":3}},{"k":"c","d":{"x":"Former partner","n":2}},{"k":"c","a":{"x":"Cross of horse and donkey","n":4}},{"k":"w","l":"M"},{"k":"w","l":"U"},{"k":"w","l":"L"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","a":{"x":"Half a dozen","n":3},"d":{"x":"Go on foot","n":4}},{"k":"w","l":"S"},{"k":"w","l":"I"},{"k":"w","l":"X"},{"k":"c","a":{"x":"Not dry","n":3}},{"k":"w","l":"W"},{"k":"w","l":"E"},{"k":"w","l":"T"},{"k":"c","d":{"x":"Primate","n":3}},{"k":"x"},{"k":"w","l":"A"},{"k":"c","d":{"x":"Article before a vowel sound","n":2}},{"k":"c","d":{"x":"Myself","n":2}},{"k":"w","l":"A"},{"k":"c","a":{"x":"Gives light","n":4}},{"k":"w","l":"L"},{"k":"w","l":"A"},{"k":"w","l":"M"},{"k":"w","l":"P"},{"k":"c","a":{"x":"Leg joint","n":4}},{"k":"w","l":"K"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"w","l":"E"}],"words":["AN","APE","EX","KNEE","LAMP","LIT","ME","MULE","SIX","USE","WALK","WET"]},{"R":7,"C":5,"cells":[{"k":"x"},{"k":"x"},{"k":"c","d":{"x":"You hear with it","n":3}},{"k":"c","d":{"x":"In the past","n":3}},{"k":"c","d":{"x":"Limb with a foot","n":3}},{"k":"c","a":{"x":"Barking sea animal","n":4}},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"x"},{"k":"c","a":{"x":"Years lived","n":3},"d":{"x":"Quick","n":4}},{"k":"w","l":"A"},{"k":"w","l":"G"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Hops and croaks","n":4}},{"k":"w","l":"F"},{"k":"w","l":"R"},{"k":"w","l":"O"},{"k":"w","l":"G"},{"k":"x"},{"k":"w","l":"A"},{"k":"c","d":{"x":"Opposite of yes","n":2}},{"k":"c","d":{"x":"Opposite of off","n":2}},{"k":"c","d":{"x":"You and I together","n":2}},{"k":"c","a":{"x":"Cold white flakes","n":4}},{"k":"w","l":"S"},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"w","l":"W"},{"k":"c","a":{"x":"Sound quality","n":4}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"}],"words":["AGE","AGO","EAR","FAST","FROG","LEG","NO","ON","SEAL","SNOW","TONE","WE"]}],[{"R":7,"C":6,"cells":[{"k":"x"},{"k":"x"},{"k":"x"},{"k":"c","d":{"x":"Mountaintop","n":4}},{"k":"c","d":{"x":"That man","n":2}},{"k":"c","d":{"x":"Everything","n":3}},{"k":"c","a":{"x":"First Greek letter","n":5}},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"w","l":"P"},{"k":"w","l":"H"},{"k":"w","l":"A"},{"k":"x"},{"k":"c","d":{"x":"Sound that bounces back","n":4}},{"k":"c","a":{"x":"Slippery fish","n":3},"d":{"x":"Falls from clouds","n":4}},{"k":"w","l":"E"},{"k":"w","l":"E"},{"k":"w","l":"L"},{"k":"c","a":{"x":"Period of history","n":3}},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"c","d":{"x":"Self-image","n":3}},{"k":"w","l":"L"},{"k":"c","a":{"x":"Birthday treat","n":4}},{"k":"w","l":"C"},{"k":"w","l":"A"},{"k":"w","l":"K"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Opposite of off","n":2}},{"k":"c","a":{"x":"Casual hello","n":2}},{"k":"w","l":"H"},{"k":"w","l":"I"},{"k":"c","a":{"x":"Opposite of stop","n":2}},{"k":"w","l":"G"},{"k":"w","l":"O"},{"k":"c","a":{"x":"It makes you cry","n":5}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"I"},{"k":"w","l":"O"},{"k":"w","l":"N"}],"words":["ALL","ALPHA","CAKE","ECHO","EEL","EGO","ERA","GO","HE","HI","ON","ONION","PEAK","RAIN"]},{"R":7,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"p":"bus","n":3,"x":"School transport"}},{"k":"c","d":{"x":"Pose a question","n":3}},{"k":"c","d":{"x":"Salty water","n":3}},{"k":"x"},{"k":"c","d":{"x":"Fib","n":3}},{"k":"c","a":{"x":"Pesto herb","n":5}},{"k":"w","l":"B"},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"I"},{"k":"w","l":"L"},{"k":"c","a":{"x":"Employ","n":3}},{"k":"w","l":"U"},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Group of three","n":4}},{"k":"w","l":"I"},{"k":"c","a":{"x":"Glide on ice","n":5}},{"k":"w","l":"S"},{"k":"w","l":"K"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","d":{"x":"Just like","n":2}},{"k":"c","d":{"x":"Opposite of down","n":2}},{"k":"c","d":{"x":"Perform","n":2}},{"k":"w","l":"R"},{"k":"c","d":{"x":"Opposite of off","n":2}},{"k":"c","a":{"x":"Sound","n":5}},{"k":"w","l":"A"},{"k":"w","l":"U"},{"k":"w","l":"D"},{"k":"w","l":"I"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Used for soup","n":5}},{"k":"w","l":"S"},{"k":"w","l":"P"},{"k":"w","l":"O"},{"k":"w","l":"O"},{"k":"w","l":"N"}],"words":["AS","ASK","AUDIO","BASIL","BUS","DO","LIE","ON","SEA","SKATE","SPOON","TRIO","UP","USE"]},{"R":7,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Falls from clouds","n":4}},{"k":"x"},{"k":"c","d":{"x":"Party music spinner","n":2}},{"k":"c","d":{"x":"Opposite of stop","n":2}},{"k":"c","d":{"x":"You see with it","n":3}},{"k":"c","a":{"x":"Mountain crest","n":5}},{"k":"w","l":"R"},{"k":"w","l":"I"},{"k":"w","l":"D"},{"k":"w","l":"G"},{"k":"w","l":"E"},{"k":"x"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Great happiness","n":3},"d":{"x":"Drop from the eye","n":4}},{"k":"w","l":"J"},{"k":"w","l":"O"},{"k":"w","l":"Y"},{"k":"c","a":{"x":"That thing","n":2}},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"c","d":{"x":"Is, plural","n":3}},{"k":"c","d":{"x":"Hot leaf drink","n":3}},{"k":"w","l":"E"},{"k":"c","a":{"x":"Tidy","n":4}},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","d":{"x":"Before noon, on a clock","n":2}},{"k":"x"},{"k":"c","a":{"x":"Size of a floor","n":4}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Imagine while asleep","n":5}},{"k":"w","l":"D"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"M"}],"words":["AM","ARE","AREA","DJ","DREAM","EYE","GO","IT","JOY","NEAT","RAIN","RIDGE","TEA","TEAR"]}],[{"R":8,"C":6,"cells":[{"k":"x"},{"k":"x"},{"k":"c","d":{"x":"Period of history","n":3}},{"k":"c","d":{"x":"Short sleep","n":3}},{"k":"c","d":{"x":"Thing on a list","n":4}},{"k":"c","d":{"x":"Nothing more than","n":4}},{"k":"c","a":{"x":"Jeans fabric","n":5}},{"k":"w","l":"D"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"I"},{"k":"w","l":"M"},{"k":"x"},{"k":"c","a":{"x":"Score","n":4},"d":{"x":"Oyster's gem","n":5}},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Write on it","n":5}},{"k":"w","l":"P"},{"k":"w","l":"A"},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"x"},{"k":"w","l":"E"},{"k":"c","d":{"x":"That woman","n":3}},{"k":"c","a":{"x":"Myself","n":2},"d":{"x":"That man","n":3}},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Fire leftover","n":3}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"H"},{"k":"c","d":{"x":"Opposite of yes","n":2}},{"k":"c","d":{"x":"Opposite of off","n":2}},{"k":"c","a":{"x":"Horned African animal","n":5}},{"k":"w","l":"R"},{"k":"w","l":"H"},{"k":"w","l":"I"},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Sour yellow fruit","n":5}},{"k":"w","l":"L"},{"k":"w","l":"E"},{"k":"w","l":"M"},{"k":"w","l":"O"},{"k":"w","l":"N"}],"words":["ASH","DENIM","ERA","HIM","ITEM","LEMON","ME","MERE","NAP","NO","ON","PAPER","PEARL","RATE","RHINO","SHE"]},{"R":8,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Fruit with tiny seeds","n":3}},{"k":"c","d":{"x":"Everything","n":3}},{"k":"c","d":{"x":"Not fast","n":4}},{"k":"x"},{"k":"x"},{"k":"c","a":{"x":"Quick","n":4}},{"k":"w","l":"F"},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"T"},{"k":"c","d":{"x":"Fast plane","n":3}},{"k":"c","a":{"x":"Not well","n":3}},{"k":"w","l":"I"},{"k":"w","l":"L"},{"k":"w","l":"L"},{"k":"c","d":{"x":"Start","n":5}},{"k":"w","l":"J"},{"k":"c","a":{"x":"Round model of Earth","n":5}},{"k":"w","l":"G"},{"k":"w","l":"L"},{"k":"w","l":"O"},{"k":"w","l":"B"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","d":{"x":"Put together","n":3}},{"k":"c","a":{"x":"Not dry","n":3},"d":{"x":"Belonging to a woman","n":3}},{"k":"w","l":"W"},{"k":"w","l":"E"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Sound of relief","n":2}},{"k":"w","l":"A"},{"k":"w","l":"H"},{"k":"c","d":{"x":"Opposite of yes","n":2}},{"k":"w","l":"G"},{"k":"c","d":{"x":"Myself","n":2}},{"k":"c","a":{"x":"Jeans fabric","n":5}},{"k":"w","l":"D"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"I"},{"k":"w","l":"M"},{"k":"c","a":{"x":"Flying camera","n":5}},{"k":"w","l":"D"},{"k":"w","l":"R"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"}],"words":["ADD","AH","ALL","BEGIN","DENIM","DRONE","FAST","FIG","GLOBE","HER","ILL","JET","ME","NO","SLOW","WET"]},{"R":8,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Highest point","n":3}},{"k":"c","d":{"x":"Brushed daily","n":4}},{"k":"c","d":{"x":"That thing","n":2}},{"k":"c","d":{"x":"Canadian \"right?\"","n":2}},{"k":"x"},{"k":"c","a":{"x":"Robber","n":5}},{"k":"w","l":"T"},{"k":"w","l":"H"},{"k":"w","l":"I"},{"k":"w","l":"E"},{"k":"w","l":"F"},{"k":"c","a":{"x":"Solemn promise","n":4}},{"k":"w","l":"O"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"H"},{"k":"c","d":{"x":"Iron or steel","n":5}},{"k":"c","a":{"x":"3.14, in math","n":2}},{"k":"w","l":"P"},{"k":"w","l":"I"},{"k":"c","d":{"x":"Land measure","n":4}},{"k":"c","d":{"x":"Adorable","n":4}},{"k":"w","l":"M"},{"k":"x"},{"k":"c","a":{"x":"Sprint contest","n":4},"d":{"x":"Rule of the land","n":3}},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"C"},{"k":"w","l":"E"},{"k":"x"},{"k":"w","l":"L"},{"k":"c","a":{"x":"Snip","n":3},"d":{"x":"Cry of surprise","n":2}},{"k":"w","l":"C"},{"k":"w","l":"U"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Main artery","n":5}},{"k":"w","l":"A"},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"w","l":"T"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Round part of a car","n":5}},{"k":"w","l":"W"},{"k":"w","l":"H"},{"k":"w","l":"E"},{"k":"w","l":"E"},{"k":"w","l":"L"}],"words":["ACRE","AORTA","CUT","CUTE","EH","HAIR","IT","LAW","METAL","OATH","OH","PI","RACE","THIEF","TOP","WHEEL"]}],[{"R":8,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Troop member","n":5}},{"k":"c","d":{"x":"Adult male","n":3}},{"k":"c","d":{"x":"Article before a vowel sound","n":2}},{"k":"c","d":{"x":"Therefore","n":2}},{"k":"c","d":{"x":"That man","n":2}},{"k":"c","a":{"x":"Break into pieces","n":5}},{"k":"w","l":"S"},{"k":"w","l":"M"},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"H"},{"k":"c","a":{"x":"Paddled boat","n":5}},{"k":"w","l":"C"},{"k":"w","l":"A"},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Opposite of off","n":2}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"c","d":{"x":"Seldom seen","n":4}},{"k":"c","d":{"x":"Bright thought","n":4}},{"k":"c","d":{"x":"Beloved","n":4}},{"k":"x"},{"k":"w","l":"U"},{"k":"c","a":{"x":"Free of","n":3},"d":{"x":"Large rodent","n":3}},{"k":"w","l":"R"},{"k":"w","l":"I"},{"k":"w","l":"D"},{"k":"c","a":{"x":"Swap","n":5}},{"k":"w","l":"T"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"D"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","a":{"x":"Size of a floor","n":4}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"x"},{"k":"c","a":{"x":"Drop from the eye","n":4}},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"R"}],"words":["AN","AREA","CANOE","DEAR","HE","IDEA","MAN","ON","RARE","RAT","RID","SCOUT","SMASH","SO","TEAR","TRADE"]},{"R":8,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Visitor from space","n":5}},{"k":"x"},{"k":"c","d":{"x":"Smallest unit of an element","n":4}},{"k":"c","d":{"x":"Sprinted","n":3}},{"k":"c","d":{"x":"Former partner","n":2}},{"k":"c","a":{"x":"Knowing","n":5}},{"k":"w","l":"A"},{"k":"w","l":"W"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"x"},{"k":"w","l":"L"},{"k":"c","a":{"x":"Part of your pay to the state","n":3},"d":{"x":"Fabric","n":5}},{"k":"w","l":"T"},{"k":"w","l":"A"},{"k":"w","l":"X"},{"k":"c","a":{"x":"App symbol","n":4}},{"k":"w","l":"I"},{"k":"w","l":"C"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"c","d":{"x":"Say no to","n":4}},{"k":"c","a":{"x":"Shade tree","n":3}},{"k":"w","l":"E"},{"k":"w","l":"L"},{"k":"w","l":"M"},{"k":"c","d":{"x":"Come first","n":3}},{"k":"w","l":"D"},{"k":"c","a":{"x":"Opposite of yes","n":2}},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"c","a":{"x":"You and I together","n":2},"d":{"x":"Casual hello","n":2}},{"k":"w","l":"W"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","a":{"x":"Slim","n":4}},{"k":"w","l":"T"},{"k":"w","l":"H"},{"k":"w","l":"I"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Gleaming","n":5}},{"k":"w","l":"S"},{"k":"w","l":"H"},{"k":"w","l":"I"},{"k":"w","l":"N"},{"k":"w","l":"Y"}],"words":["ALIEN","ATOM","AWARE","CLOTH","DENY","ELM","EX","HI","ICON","NO","RAN","SHINY","TAX","THIN","WE","WIN"]},{"R":8,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Flying mammal","n":3}},{"k":"c","d":{"x":"Exists","n":2}},{"k":"c","d":{"x":"Where clouds float","n":3}},{"k":"x"},{"k":"c","d":{"x":"Squirrel snack","n":3}},{"k":"c","a":{"x":"Buffalo","n":5}},{"k":"w","l":"B"},{"k":"w","l":"I"},{"k":"w","l":"S"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Pose a question","n":3}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"K"},{"k":"c","d":{"x":"Mistake","n":5}},{"k":"w","l":"U"},{"k":"x"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Still","n":3},"d":{"x":"App symbol","n":4}},{"k":"w","l":"Y"},{"k":"w","l":"E"},{"k":"w","l":"T"},{"k":"x"},{"k":"c","d":{"x":"That woman","n":3}},{"k":"w","l":"I"},{"k":"c","d":{"x":"Tiny colony insect","n":3}},{"k":"w","l":"R"},{"k":"c","d":{"x":"Cook in oil","n":3}},{"k":"c","a":{"x":"Wrapped around the neck","n":5}},{"k":"w","l":"S"},{"k":"w","l":"C"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"F"},{"k":"c","a":{"x":"Great respect","n":5}},{"k":"w","l":"H"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"c","a":{"x":"Way in","n":5}},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"T"},{"k":"w","l":"R"},{"k":"w","l":"Y"}],"words":["ANT","ASK","BAT","BISON","ENTRY","ERROR","FRY","HONOR","ICON","IS","NUT","SCARF","SHE","SKY","YET"]}],[{"R":9,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Shows the way","n":3}},{"k":"c","d":{"x":"Martini garnish","n":5}},{"k":"c","d":{"x":"Opposite of from","n":2}},{"k":"c","d":{"x":"Opposite of off","n":2}},{"k":"c","d":{"x":"Monthly home cost","n":4}},{"k":"c","a":{"x":"Engine","n":5}},{"k":"w","l":"M"},{"k":"w","l":"O"},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"c","a":{"x":"By oneself","n":5}},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"c","a":{"x":"3.14, in math","n":2}},{"k":"w","l":"P"},{"k":"w","l":"I"},{"k":"c","d":{"x":"Photo book","n":5}},{"k":"c","d":{"x":"Tent peg","n":5}},{"k":"w","l":"N"},{"k":"x"},{"k":"c","a":{"x":"Huge","n":4},"d":{"x":"Myself","n":2}},{"k":"w","l":"V"},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Turn to liquid","n":4}},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"w","l":"L"},{"k":"w","l":"T"},{"k":"c","d":{"x":"Still","n":3}},{"k":"x"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Water near a coast","n":3},"d":{"x":"Perform","n":2}},{"k":"w","l":"B"},{"k":"w","l":"A"},{"k":"w","l":"Y"},{"k":"x"},{"k":"c","a":{"x":"Noble title","n":4}},{"k":"w","l":"D"},{"k":"w","l":"U"},{"k":"w","l":"K"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Icy space visitor with a tail","n":5}},{"k":"w","l":"C"},{"k":"w","l":"O"},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"w","l":"T"}],"words":["ALBUM","ALONE","BAY","COMET","DO","DUKE","MAP","ME","MELT","MOTOR","OLIVE","ON","PI","RENT","STAKE","TO","VAST","YET"]},{"R":9,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Sound that bounces back","n":4}},{"k":"c","d":{"x":"Opposite of stop","n":2}},{"k":"c","d":{"x":"Spoken","n":4}},{"k":"x"},{"k":"c","d":{"x":"Not new","n":3}},{"k":"c","a":{"x":"Self-image","n":3}},{"k":"w","l":"E"},{"k":"w","l":"G"},{"k":"w","l":"O"},{"k":"c","d":{"x":"Article before a vowel sound","n":2}},{"k":"w","l":"O"},{"k":"c","a":{"x":"Reef builder","n":5}},{"k":"w","l":"C"},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"x"},{"k":"w","l":"H"},{"k":"c","a":{"x":"Plus","n":3},"d":{"x":"Wrist timepiece","n":5}},{"k":"w","l":"A"},{"k":"w","l":"N"},{"k":"w","l":"D"},{"k":"c","a":{"x":"Night bird that hoots","n":3}},{"k":"w","l":"O"},{"k":"w","l":"W"},{"k":"w","l":"L"},{"k":"c","d":{"x":"Smallest unit of an element","n":4}},{"k":"c","d":{"x":"Nothing more than","n":4}},{"k":"x"},{"k":"c","d":{"x":"Took a seat","n":3}},{"k":"w","l":"A"},{"k":"c","a":{"x":"Before noon, on a clock","n":2},"d":{"x":"Had dinner","n":3}},{"k":"w","l":"A"},{"k":"w","l":"M"},{"k":"c","a":{"x":"Say out loud","n":5}},{"k":"w","l":"S"},{"k":"w","l":"T"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Stage performer","n":5}},{"k":"w","l":"A"},{"k":"w","l":"C"},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"c","a":{"x":"Main subject","n":5}},{"k":"w","l":"T"},{"k":"w","l":"H"},{"k":"w","l":"E"},{"k":"w","l":"M"},{"k":"w","l":"E"}],"words":["ACTOR","AM","AN","AND","ATE","ATOM","CORAL","ECHO","EGO","GO","MERE","OLD","ORAL","OWL","SAT","STATE","THEME","WATCH"]},{"R":9,"C":6,"cells":[{"k":"x"},{"k":"c","d":{"x":"Where stars and planets are","n":5}},{"k":"c","d":{"x":"Solemn promise","n":4}},{"k":"x"},{"k":"c","d":{"x":"Preposition for a place","n":2}},{"k":"c","d":{"x":"The Red Planet","n":4}},{"k":"c","a":{"x":"Therefore","n":2}},{"k":"w","l":"S"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Before noon, on a clock","n":2},"d":{"x":"Look at","n":3}},{"k":"w","l":"A"},{"k":"w","l":"M"},{"k":"c","a":{"x":"Spaghetti, for one","n":5}},{"k":"w","l":"P"},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"T"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Had dinner","n":3}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Cool spot under a tree","n":5}},{"k":"w","l":"R"},{"k":"c","a":{"x":"Game with kings and pawns","n":5}},{"k":"w","l":"C"},{"k":"w","l":"H"},{"k":"w","l":"E"},{"k":"w","l":"S"},{"k":"w","l":"S"},{"k":"x"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Forbid","n":3}},{"k":"c","d":{"x":"The finish","n":3}},{"k":"w","l":"H"},{"k":"c","d":{"x":"Part of your pay to the state","n":3}},{"k":"x"},{"k":"c","a":{"x":"Drum sound","n":4},"d":{"x":"3.14, in math","n":2}},{"k":"w","l":"B"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Bamboo-eating bear","n":5}},{"k":"w","l":"P"},{"k":"w","l":"A"},{"k":"w","l":"N"},{"k":"w","l":"D"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Pointing finger","n":5}},{"k":"w","l":"I"},{"k":"w","l":"N"},{"k":"w","l":"D"},{"k":"w","l":"E"},{"k":"w","l":"X"}],"words":["AM","AT","ATE","BAN","BEAT","CHESS","END","INDEX","MARS","OATH","PANDA","PASTA","PI","SEE","SHADE","SO","SPACE","TAX"]}],[{"R":9,"C":7,"cells":[{"k":"x"},{"k":"x"},{"k":"c","d":{"x":"Opposite of stop","n":2}},{"k":"c","d":{"x":"Person","n":5}},{"k":"x"},{"k":"c","d":{"x":"Footwear","n":4}},{"k":"c","d":{"x":"Can material","n":3}},{"k":"x"},{"k":"c","a":{"x":"Spooky spirit","n":5}},{"k":"w","l":"G"},{"k":"w","l":"H"},{"k":"w","l":"O"},{"k":"w","l":"S"},{"k":"w","l":"T"},{"k":"c","a":{"x":"The one being spoken to","n":3}},{"k":"w","l":"Y"},{"k":"w","l":"O"},{"k":"w","l":"U"},{"k":"c","a":{"x":"Casual hello","n":2},"d":{"x":"Sung drama","n":5}},{"k":"w","l":"H"},{"k":"w","l":"I"},{"k":"x"},{"k":"c","d":{"x":"Pebble","n":5}},{"k":"c","a":{"x":"Earth's satellite","n":4},"d":{"x":"Great respect","n":5}},{"k":"w","l":"M"},{"k":"w","l":"O"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Circle or square","n":5}},{"k":"w","l":"S"},{"k":"w","l":"H"},{"k":"w","l":"A"},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Old legend","n":4}},{"k":"c","a":{"x":"Sound quality","n":4}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Is, plural","n":3}},{"k":"w","l":"M"},{"k":"c","a":{"x":"Opposite of off","n":2}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Beam of light","n":3}},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"Y"},{"k":"c","a":{"x":"Opposite of yes","n":2}},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Painting or sculpture","n":3}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Period of history","n":3}},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Canadian \"right?\"","n":2}},{"k":"w","l":"E"},{"k":"w","l":"H"}],"words":["ARE","ART","EH","ERA","GHOST","GO","HI","HONOR","HUMAN","MOON","MYTH","NO","ON","OPERA","RAY","SHAPE","SHOE","STONE","TIN","TONE","YOU"]},{"R":9,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Syrup tree","n":5}},{"k":"c","d":{"x":"Largest continent","n":4}},{"k":"x"},{"k":"c","d":{"x":"Web address","n":4}},{"k":"x"},{"k":"c","d":{"x":"Limb with a foot","n":3}},{"k":"c","a":{"x":"The Red Planet","n":4}},{"k":"w","l":"M"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"S"},{"k":"c","d":{"p":"car","n":3,"x":"Four-wheeled vehicle"}},{"k":"w","l":"L"},{"k":"c","a":{"x":"Just like","n":2}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"c","a":{"x":"Frozen water","n":3}},{"k":"w","l":"I"},{"k":"w","l":"C"},{"k":"w","l":"E"},{"k":"c","a":{"x":"3.14, in math","n":2}},{"k":"w","l":"P"},{"k":"w","l":"I"},{"k":"c","a":{"x":"Chasing game","n":3},"d":{"x":"Result of adding","n":3}},{"k":"w","l":"T"},{"k":"w","l":"A"},{"k":"w","l":"G"},{"k":"c","a":{"x":"Focused light beam","n":5}},{"k":"w","l":"L"},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"c","d":{"x":"Has branches and leaves","n":4}},{"k":"x"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Had dinner","n":3}},{"k":"w","l":"U"},{"k":"c","d":{"x":"Flying mammal","n":3}},{"k":"c","d":{"x":"Self-image","n":3}},{"k":"w","l":"T"},{"k":"x"},{"k":"c","a":{"x":"Fossilized tree resin","n":5},"d":{"x":"Sound of relief","n":2}},{"k":"w","l":"A"},{"k":"w","l":"M"},{"k":"w","l":"B"},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"c","a":{"x":"Preposition for a place","n":2}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Years lived","n":3}},{"k":"w","l":"A"},{"k":"w","l":"G"},{"k":"w","l":"E"},{"k":"c","a":{"x":"That man","n":2}},{"k":"w","l":"H"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Foot digit","n":3}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"w","l":"E"}],"words":["AGE","AH","AMBER","AS","ASIA","AT","ATE","BAT","CAR","EGO","HE","ICE","LASER","LEG","MAPLE","MARS","PI","SITE","SUM","TAG","TOE","TREE"]},{"R":9,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Salty water","n":3}},{"k":"c","d":{"x":"You hear with it","n":3}},{"k":"c","d":{"x":"Had dinner","n":3}},{"k":"x"},{"k":"x"},{"k":"c","d":{"x":"You and I together","n":2}},{"k":"c","a":{"x":"Barking sea animal","n":4}},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"c","d":{"x":"Shows the way","n":3}},{"k":"w","l":"W"},{"k":"c","a":{"x":"Have a meal","n":3}},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Myself","n":2},"d":{"x":"Short sleep","n":3}},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Sports venue","n":5}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"A"},{"k":"c","d":{"x":"The very best","n":5}},{"k":"x"},{"k":"c","d":{"x":"Sideways walker","n":4}},{"k":"c","d":{"x":"Queue","n":4}},{"k":"c","a":{"x":"Primate","n":3},"d":{"x":"Put together","n":3}},{"k":"w","l":"A"},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Applaud","n":4}},{"k":"w","l":"C"},{"k":"w","l":"L"},{"k":"w","l":"A"},{"k":"w","l":"P"},{"k":"c","d":{"x":"Frying vessel","n":3}},{"k":"w","l":"L"},{"k":"c","a":{"x":"Free of","n":3}},{"k":"w","l":"R"},{"k":"w","l":"I"},{"k":"w","l":"D"},{"k":"c","a":{"x":"3.14, in math","n":2}},{"k":"w","l":"P"},{"k":"w","l":"I"},{"k":"c","a":{"x":"Plus","n":3}},{"k":"w","l":"A"},{"k":"w","l":"N"},{"k":"w","l":"D"},{"k":"c","a":{"x":"Preposition for a place","n":2}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"To exist","n":2}},{"k":"w","l":"B"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Single","n":3}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"}],"words":["ADD","AND","APE","ARENA","AT","ATE","BE","CLAP","CRAB","EAR","EAT","ELITE","LINE","MAP","ME","NAP","ONE","PAN","PI","RID","SEA","SEAL","WE"]}],[{"R":10,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Primate","n":3}},{"k":"c","d":{"x":"Monthly home cost","n":4}},{"k":"c","d":{"x":"Purring pet","n":3}},{"k":"c","d":{"x":"Group of three","n":4}},{"k":"x"},{"k":"c","d":{"x":"Shed tears","n":3}},{"k":"c","a":{"x":"Region around the North Pole","n":6}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"C"},{"k":"w","l":"T"},{"k":"w","l":"I"},{"k":"w","l":"C"},{"k":"c","a":{"x":"Fruit shaped like a bulb","n":4}},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"c","d":{"x":"A pair","n":3}},{"k":"w","l":"R"},{"k":"c","a":{"x":"Thing that exists","n":6}},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"T"},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"w","l":"Y"},{"k":"x"},{"k":"c","d":{"p":"clock","n":5,"x":"Tells time"}},{"k":"w","l":"T"},{"k":"c","a":{"x":"Cry of pain","n":2},"d":{"x":"Visitor","n":5}},{"k":"w","l":"O"},{"k":"w","l":"W"},{"k":"c","d":{"x":"Hurry","n":5}},{"k":"x"},{"k":"w","l":"C"},{"k":"c","d":{"x":"Opposite of off","n":2}},{"k":"w","l":"G"},{"k":"c","a":{"x":"Cry of surprise","n":2}},{"k":"w","l":"O"},{"k":"w","l":"H"},{"k":"c","a":{"x":"Not quiet","n":4}},{"k":"w","l":"L"},{"k":"w","l":"O"},{"k":"w","l":"U"},{"k":"w","l":"D"},{"k":"c","d":{"x":"Everything","n":3}},{"k":"w","l":"A"},{"k":"c","a":{"x":"Single","n":3}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Just like","n":2},"d":{"x":"Preposition for a place","n":2}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"x"},{"k":"w","l":"C"},{"k":"c","a":{"x":"Seasoning in a shaker","n":4}},{"k":"w","l":"S"},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Boils water for tea","n":6}},{"k":"w","l":"K"},{"k":"w","l":"E"},{"k":"w","l":"T"},{"k":"w","l":"T"},{"k":"w","l":"L"},{"k":"w","l":"E"}],"words":["ALL","APE","ARCTIC","AS","AT","CAT","CLOCK","CRY","ENTITY","GUEST","HASTE","KETTLE","LOUD","OH","ON","ONE","OW","PEAR","RENT","SALT","TRIO","TWO"]},{"R":10,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Halt","n":4}},{"k":"c","d":{"x":"Sound quality","n":4}},{"k":"c","d":{"x":"Before noon, on a clock","n":2}},{"k":"c","d":{"x":"Chasing game","n":3}},{"k":"c","d":{"x":"That thing","n":2}},{"k":"c","d":{"x":"Icy space visitor with a tail","n":5}},{"k":"c","a":{"x":"Not moving","n":6}},{"k":"w","l":"S"},{"k":"w","l":"T"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"I"},{"k":"w","l":"C"},{"k":"c","a":{"x":"Red salad fruit","n":6}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"w","l":"M"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Opposite of off","n":2}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"c","d":{"x":"Heavenly being","n":5}},{"k":"w","l":"G"},{"k":"c","d":{"x":"Of the sea","n":6}},{"k":"w","l":"M"},{"k":"c","a":{"x":"Small green veggie","n":3}},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Myself","n":2}},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","d":{"x":"Has eyes and a nose","n":4}},{"k":"c","a":{"x":"Tidy","n":4}},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Low cloud","n":3}},{"k":"w","l":"F"},{"k":"w","l":"O"},{"k":"w","l":"G"},{"k":"c","d":{"x":"Chip's partner","n":3}},{"k":"w","l":"R"},{"k":"c","d":{"x":"Number of fingers","n":3}},{"k":"x"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Fix a draft","n":4}},{"k":"w","l":"E"},{"k":"w","l":"D"},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"x"},{"k":"w","l":"C"},{"k":"c","a":{"x":"Queue","n":4}},{"k":"w","l":"L"},{"k":"w","l":"I"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Former partner","n":2}},{"k":"w","l":"E"},{"k":"w","l":"X"},{"k":"c","a":{"x":"Writes with ink","n":3}},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"w","l":"N"}],"words":["AM","ANGEL","COMET","DIP","EDIT","EX","FACE","FOG","IT","LINE","MARINE","ME","NEAT","ON","PEA","PEN","STATIC","STOP","TAG","TEN","TOMATO","TONE"]},{"R":10,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Lawn cover","n":5}},{"k":"c","d":{"x":"You hear with it","n":3}},{"k":"c","d":{"x":"Primate","n":3}},{"k":"x"},{"k":"x"},{"k":"c","d":{"x":"Opposite of stop","n":2}},{"k":"c","a":{"x":"Equipment","n":4}},{"k":"w","l":"G"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"c","d":{"x":"Not short","n":4}},{"k":"w","l":"G"},{"k":"c","a":{"x":"Hip-hop style","n":3}},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"P"},{"k":"c","a":{"x":"Opposite of from","n":2},"d":{"x":"Point on a network","n":4}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Sports venue","n":5}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"A"},{"k":"c","d":{"x":"Dry sandy region","n":6}},{"k":"x"},{"k":"w","l":"S"},{"k":"c","d":{"x":"Main artery","n":5}},{"k":"c","a":{"x":"Not new","n":3},"d":{"x":"Not wet","n":3}},{"k":"w","l":"O"},{"k":"w","l":"L"},{"k":"w","l":"D"},{"k":"c","a":{"x":"Horse rider's seat","n":6}},{"k":"w","l":"S"},{"k":"w","l":"A"},{"k":"w","l":"D"},{"k":"w","l":"D"},{"k":"w","l":"L"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","a":{"x":"Rock with metal in it","n":3},"d":{"x":"Purring pet","n":3}},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Fellows","n":3}},{"k":"w","l":"S"},{"k":"c","a":{"x":"Shed tears","n":3}},{"k":"w","l":"C"},{"k":"w","l":"R"},{"k":"w","l":"Y"},{"k":"c","a":{"x":"Myself","n":2},"d":{"x":"That man","n":2}},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Preposition for a place","n":2}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Belonging to a woman","n":3}},{"k":"w","l":"H"},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"c","a":{"x":"Natural skill","n":6}},{"k":"w","l":"T"},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"T"}],"words":["AORTA","APE","ARENA","AT","CAT","CRY","DESERT","DRY","EAR","GEAR","GO","GRASS","HE","HER","ME","MEN","NODE","OLD","ORE","RAP","SADDLE","TALENT","TALL","TO"]}],[{"R":10,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Salty water","n":3}},{"k":"c","d":{"x":"Sleep in a tent","n":4}},{"k":"c","d":{"x":"Just like","n":2}},{"k":"c","d":{"x":"Prize","n":6}},{"k":"x"},{"k":"c","d":{"x":"Cardboard container","n":3}},{"k":"c","a":{"x":"Egyptian beetle","n":6}},{"k":"w","l":"S"},{"k":"w","l":"C"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"B"},{"k":"c","a":{"x":"Make simpler","n":4}},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Is, plural","n":3}},{"k":"w","l":"O"},{"k":"c","a":{"x":"Before noon, on a clock","n":2}},{"k":"w","l":"A"},{"k":"w","l":"M"},{"k":"c","a":{"x":"Candle material","n":3},"d":{"x":"You hear with it","n":3}},{"k":"w","l":"W"},{"k":"w","l":"A"},{"k":"w","l":"X"},{"k":"x"},{"k":"c","a":{"x":"Fruit shaped like a bulb","n":4},"d":{"x":"Large sea vessel","n":4}},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"c","d":{"x":"Spy, for one","n":5}},{"k":"x"},{"k":"w","l":"S"},{"k":"c","a":{"x":"Size of a floor","n":4},"d":{"x":"Smallest unit of an element","n":4}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Like a rock","n":4}},{"k":"w","l":"H"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"D"},{"k":"c","d":{"x":"Adult male","n":3}},{"k":"w","l":"G"},{"k":"c","a":{"x":"That thing","n":2}},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"c","d":{"x":"Opposite of from","n":2}},{"k":"c","a":{"x":"Myself","n":2}},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Cooking vessel","n":3}},{"k":"w","l":"P"},{"k":"w","l":"O"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Article before a vowel sound","n":2}},{"k":"w","l":"A"},{"k":"w","l":"N"},{"k":"x"},{"k":"c","a":{"x":"Climb up","n":5}},{"k":"w","l":"M"},{"k":"w","l":"O"},{"k":"w","l":"U"},{"k":"w","l":"N"},{"k":"w","l":"T"}],"words":["AGENT","AM","AN","ARE","AREA","AS","ATOM","BOX","CAMP","EAR","EASE","HARD","IT","MAN","ME","MOUNT","PEAR","POT","REWARD","SCARAB","SEA","SHIP","TO","WAX"]},{"R":10,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Largest continent","n":4}},{"k":"c","d":{"x":"Spaghetti, for one","n":5}},{"k":"c","d":{"x":"Canadian \"right?\"","n":2}},{"k":"x"},{"k":"c","d":{"x":"Make a sketch","n":4}},{"k":"x"},{"k":"c","a":{"x":"Primate","n":3}},{"k":"w","l":"A"},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Smallest unit of an element","n":4}},{"k":"w","l":"D"},{"k":"c","d":{"x":"Years lived","n":3}},{"k":"c","a":{"x":"Largest hot desert","n":6}},{"k":"w","l":"S"},{"k":"w","l":"A"},{"k":"w","l":"H"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Exists","n":2}},{"k":"w","l":"I"},{"k":"w","l":"S"},{"k":"c","a":{"x":"Chasing game","n":3}},{"k":"w","l":"T"},{"k":"w","l":"A"},{"k":"w","l":"G"},{"k":"c","a":{"x":"Preposition for a place","n":2}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Be in debt","n":3},"d":{"x":"Large rodent","n":3}},{"k":"w","l":"O"},{"k":"w","l":"W"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","a":{"x":"Limb with a hand","n":3},"d":{"x":"In the middle of","n":4}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"M"},{"k":"c","d":{"x":"Size of a floor","n":4}},{"k":"c","d":{"x":"Chair","n":4}},{"k":"x"},{"k":"w","l":"A"},{"k":"c","d":{"x":"Had dinner","n":3}},{"k":"w","l":"A"},{"k":"c","a":{"x":"Just like","n":2},"d":{"x":"Employ","n":3}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"c","a":{"x":"Fully grown","n":6}},{"k":"w","l":"M"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"U"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"c","a":{"x":"That thing","n":2}},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Salty water","n":3}},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Beat","n":6}},{"k":"w","l":"D"},{"k":"w","l":"E"},{"k":"w","l":"F"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"T"}],"words":["AGE","AMID","APE","AREA","ARM","AS","ASIA","AT","ATE","ATOM","DEFEAT","DRAW","EH","IS","IT","MATURE","OWE","PASTA","RAT","SAHARA","SEA","SEAT","TAG","USE"]},{"R":10,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Quick","n":4}},{"k":"c","d":{"x":"Do something","n":3}},{"k":"c","d":{"x":"Shows your reflection","n":6}},{"k":"c","d":{"x":"Bright thought","n":4}},{"k":"x"},{"k":"c","d":{"x":"Opposite of no","n":3}},{"k":"c","a":{"x":"Parents and kids","n":6}},{"k":"w","l":"F"},{"k":"w","l":"A"},{"k":"w","l":"M"},{"k":"w","l":"I"},{"k":"w","l":"L"},{"k":"w","l":"Y"},{"k":"c","a":{"x":"Lemon juice is one","n":4}},{"k":"w","l":"A"},{"k":"w","l":"C"},{"k":"w","l":"I"},{"k":"w","l":"D"},{"k":"c","d":{"x":"Place to relax","n":3}},{"k":"w","l":"E"},{"k":"c","a":{"x":"Pressure","n":6}},{"k":"w","l":"S"},{"k":"w","l":"T"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"S"},{"k":"w","l":"S"},{"k":"x"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Hip-hop style","n":3},"d":{"x":"Flavor sense","n":5}},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"P"},{"k":"c","d":{"x":"Popular thing","n":5}},{"k":"x"},{"k":"c","a":{"x":"Opposite of from","n":2},"d":{"x":"Train track","n":4}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Preposition for a place","n":2},"d":{"x":"Make simpler","n":4}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Seldom seen","n":4}},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Move fast on foot","n":3}},{"k":"w","l":"R"},{"k":"c","a":{"x":"Just like","n":2}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"c","a":{"x":"Is, plural","n":3}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"c","a":{"x":"That thing","n":2}},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"c","a":{"p":"sun","n":3,"x":"Star that warms Earth"}},{"k":"w","l":"S"},{"k":"w","l":"U"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Story from the past","n":6}},{"k":"w","l":"L"},{"k":"w","l":"E"},{"k":"w","l":"G"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"D"}],"words":["ACID","ACT","ARE","AS","AT","EASE","FAMILY","FAST","IDEA","IT","LEGEND","MIRROR","RAIL","RAP","RARE","RUN","SPA","STRESS","SUN","TASTE","TO","TREND","YES"]}],[{"R":11,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Book of maps","n":5}},{"k":"c","d":{"x":"Therefore","n":2}},{"k":"c","d":{"x":"Used for soup","n":5}},{"k":"x"},{"k":"c","d":{"x":"Where actors perform","n":5}},{"k":"c","d":{"x":"Alone on stage","n":4}},{"k":"c","a":{"x":"Judge the value of","n":6}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"S"},{"k":"w","l":"S"},{"k":"c","a":{"x":"Highest point","n":3}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"w","l":"P"},{"k":"c","a":{"x":"Opposite of from","n":2}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"x"},{"k":"w","l":"L"},{"k":"c","a":{"x":"Spoken","n":4},"d":{"x":"Sparkling stone","n":3}},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"c","a":{"x":"In the past","n":3}},{"k":"w","l":"A"},{"k":"w","l":"G"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Opposite of stop","n":2},"d":{"x":"That woman","n":3}},{"k":"w","l":"G"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Sight or smell","n":5}},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Uptight","n":5}},{"k":"x"},{"k":"c","d":{"x":"Night flyer drawn to light","n":4}},{"k":"w","l":"M"},{"k":"c","d":{"x":"Fellows","n":3}},{"k":"w","l":"H"},{"k":"c","d":{"x":"Falls from clouds","n":4}},{"k":"w","l":"T"},{"k":"x"},{"k":"w","l":"M"},{"k":"c","a":{"x":"Nothing more than","n":4},"d":{"x":"Tiny","n":3}},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Be in debt","n":3}},{"k":"w","l":"O"},{"k":"w","l":"W"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Article before a vowel sound","n":2},"d":{"x":"Opposite of yes","n":2}},{"k":"w","l":"A"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Game with a racket and net","n":6}},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"N"},{"k":"w","l":"I"},{"k":"w","l":"S"},{"k":"c","a":{"x":"That man","n":2}},{"k":"w","l":"H"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Single","n":3}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"}],"words":["AGO","AN","ASSESS","ATLAS","GEM","GO","HE","MEN","MERE","MOTH","NO","ONE","ORAL","OWE","RAIN","SENSE","SHE","SO","SOLO","SPOON","STAGE","TENNIS","TENSE","TO","TOP","WEE"]},{"R":11,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Region around the North Pole","n":6}},{"k":"c","d":{"x":"Aching","n":4}},{"k":"x"},{"k":"c","d":{"x":"Not dry","n":3}},{"k":"x"},{"k":"c","d":{"x":"Royal seat","n":6}},{"k":"c","a":{"x":"Just like","n":2}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"c","a":{"x":"Clever humor","n":3},"d":{"x":"Adult male","n":3}},{"k":"w","l":"W"},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Capital of Italy","n":4}},{"k":"w","l":"R"},{"k":"w","l":"O"},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Self-image","n":3}},{"k":"w","l":"H"},{"k":"c","a":{"x":"Hole left by a meteor","n":6}},{"k":"w","l":"C"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"c","a":{"x":"Number of fingers","n":3}},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Opposite of stop","n":2},"d":{"x":"Place to relax","n":3}},{"k":"w","l":"G"},{"k":"w","l":"O"},{"k":"x"},{"k":"w","l":"I"},{"k":"c","d":{"x":"Say yes to","n":5}},{"k":"c","a":{"x":"Male child","n":3},"d":{"x":"Iron or steel","n":5}},{"k":"w","l":"S"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Sleep in a tent","n":4}},{"k":"w","l":"C"},{"k":"w","l":"A"},{"k":"w","l":"M"},{"k":"w","l":"P"},{"k":"c","d":{"x":"Score","n":4}},{"k":"w","l":"E"},{"k":"x"},{"k":"c","a":{"x":"Equipment","n":4},"d":{"x":"Fire leftover","n":3}},{"k":"w","l":"G"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"c","d":{"x":"Opposite of cold","n":3}},{"k":"c","a":{"x":"Painting or sculpture","n":3}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Sound of relief","n":2}},{"k":"w","l":"A"},{"k":"w","l":"H"},{"k":"c","a":{"x":"Salty water","n":3}},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Opposite of from","n":2}},{"k":"w","l":"T"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Bike rider's head gear","n":6}},{"k":"w","l":"H"},{"k":"w","l":"E"},{"k":"w","l":"L"},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"w","l":"T"}],"words":["AGREE","AH","ARCTIC","ART","AS","ASH","CAMP","CRATER","EGO","GEAR","GO","HELMET","HOT","MAN","METAL","RATE","ROME","SEA","SON","SORE","SPA","TEN","THRONE","TO","WET","WIT"]},{"R":11,"C":7,"cells":[{"k":"x"},{"k":"c","d":{"x":"Had dinner","n":3}},{"k":"c","d":{"x":"Old word for your","n":3}},{"k":"x"},{"k":"c","d":{"x":"Perform","n":2}},{"k":"c","d":{"x":"Article before a vowel sound","n":2}},{"k":"c","d":{"x":"Dry sandy region","n":6}},{"k":"c","a":{"x":"Preposition for a place","n":2}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Father","n":3},"d":{"x":"Look at the words","n":4}},{"k":"w","l":"D"},{"k":"w","l":"A"},{"k":"w","l":"D"},{"k":"c","a":{"x":"Royal seat","n":6}},{"k":"w","l":"T"},{"k":"w","l":"H"},{"k":"w","l":"R"},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"c","a":{"x":"You see with it","n":3}},{"k":"w","l":"E"},{"k":"w","l":"Y"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Reef builder","n":5}},{"k":"c","d":{"x":"Cars drive on it","n":4}},{"k":"w","l":"S"},{"k":"x"},{"k":"c","d":{"x":"Money earned","n":6}},{"k":"c","a":{"x":"Land measure","n":4}},{"k":"w","l":"A"},{"k":"w","l":"C"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"x"},{"k":"w","l":"I"},{"k":"c","a":{"x":"You open it to enter","n":4}},{"k":"w","l":"D"},{"k":"w","l":"O"},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"c","a":{"x":"Opposite of yes","n":2}},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Large rodent","n":3},"d":{"x":"Performed a song","n":4}},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"x"},{"k":"w","l":"C"},{"k":"c","a":{"x":"Not happy","n":3},"d":{"x":"Sprinted","n":3}},{"k":"w","l":"S"},{"k":"w","l":"A"},{"k":"w","l":"D"},{"k":"c","d":{"x":"Be in debt","n":3}},{"k":"c","a":{"x":"Spoken","n":4}},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"L"},{"k":"c","d":{"x":"Opposite of off","n":2}},{"k":"w","l":"O"},{"k":"c","a":{"x":"Adult male","n":3}},{"k":"w","l":"M"},{"k":"w","l":"A"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Cry of pain","n":2}},{"k":"w","l":"O"},{"k":"w","l":"W"},{"k":"c","a":{"x":"Powers a car","n":6}},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"G"},{"k":"w","l":"I"},{"k":"w","l":"N"},{"k":"w","l":"E"}],"words":["ACRE","AN","AT","ATE","CORAL","DAD","DESERT","DO","DOOR","ENGINE","EYE","INCOME","MAN","NO","ON","ORAL","OW","OWE","RAN","RAT","READ","ROAD","SAD","SANG","THRONE","THY"]}],[{"R":11,"C":8,"cells":[{"k":"x"},{"k":"c","d":{"x":"Yellow taxi","n":3}},{"k":"c","d":{"x":"Is, plural","n":3}},{"k":"c","d":{"x":"Myself","n":2}},{"k":"c","d":{"x":"Powers a car","n":6}},{"k":"c","d":{"x":"Train track","n":4}},{"k":"x"},{"k":"x"},{"k":"c","a":{"x":"Takes pictures","n":6}},{"k":"w","l":"C"},{"k":"w","l":"A"},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"c","d":{"x":"Preposition for a place","n":2}},{"k":"c","a":{"x":"Sports venue","n":5}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"w","l":"A"},{"k":"c","d":{"x":"Winter bug","n":3}},{"k":"w","l":"A"},{"k":"c","a":{"x":"To exist","n":2}},{"k":"w","l":"B"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Present","n":4}},{"k":"w","l":"G"},{"k":"w","l":"I"},{"k":"w","l":"F"},{"k":"w","l":"T"},{"k":"x"},{"k":"c","d":{"x":"Standing","n":6}},{"k":"c","d":{"x":"Unmixed","n":4}},{"k":"c","a":{"x":"Not well","n":3},"d":{"x":"Unbroken","n":6}},{"k":"w","l":"I"},{"k":"w","l":"L"},{"k":"w","l":"L"},{"k":"c","d":{"x":"Fry or mash it","n":6}},{"k":"c","a":{"x":"Twirl","n":4}},{"k":"w","l":"S"},{"k":"w","l":"P"},{"k":"w","l":"I"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Opposite of down","n":2}},{"k":"w","l":"U"},{"k":"w","l":"P"},{"k":"c","a":{"x":"Melody","n":4}},{"k":"w","l":"T"},{"k":"w","l":"U"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Primate","n":3}},{"k":"c","d":{"x":"Tidy","n":4}},{"k":"w","l":"O"},{"k":"c","a":{"x":"Painting or sculpture","n":3}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Tiny colony insect","n":3}},{"k":"w","l":"A"},{"k":"w","l":"N"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Hot leaf drink","n":3}},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Small green veggie","n":3},"d":{"x":"That man","n":2}},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"x"},{"k":"w","l":"U"},{"k":"c","a":{"x":"Break the rules","n":5}},{"k":"w","l":"C"},{"k":"w","l":"H"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Web address","n":4}},{"k":"w","l":"S"},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Opposite of from","n":2}},{"k":"w","l":"T"},{"k":"w","l":"O"}],"words":["ANT","APE","ARE","ARENA","ART","AT","BE","CAB","CAMERA","CHEAT","ENGINE","FLU","GIFT","HE","ILL","INTACT","ME","NEAT","PEA","POTATO","PURE","RAIL","SITE","SPIN","STATUS","TEA","TO","TUNE","UP"]},{"R":11,"C":8,"cells":[{"k":"x"},{"k":"c","d":{"x":"That woman","n":3}},{"k":"c","d":{"x":"Candle material","n":3}},{"k":"c","d":{"x":"That thing","n":2}},{"k":"x"},{"k":"c","d":{"x":"Shut","n":5}},{"k":"c","d":{"x":"Give a job to","n":4}},{"k":"x"},{"k":"c","a":{"x":"Light control","n":6}},{"k":"w","l":"S"},{"k":"w","l":"W"},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"w","l":"C"},{"k":"w","l":"H"},{"k":"c","d":{"x":"Camper's shelter","n":4}},{"k":"c","a":{"p":"hat","n":3,"x":"Worn on the head"}},{"k":"w","l":"H"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Switched on","n":3}},{"k":"w","l":"L"},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Former partner","n":2}},{"k":"w","l":"E"},{"k":"w","l":"X"},{"k":"c","d":{"x":"Hip-hop style","n":3}},{"k":"c","a":{"x":"Rock with metal in it","n":3},"d":{"x":"Thing on a list","n":4}},{"k":"w","l":"O"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"x"},{"k":"c","d":{"x":"Place to relax","n":3}},{"k":"c","a":{"x":"Gone up","n":5},"d":{"x":"Young cat","n":6}},{"k":"w","l":"R"},{"k":"w","l":"I"},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Glide on ice","n":5}},{"k":"w","l":"S"},{"k":"w","l":"K"},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Popular thing","n":5}},{"k":"w","l":"T"},{"k":"c","a":{"x":"Water carrier","n":4}},{"k":"w","l":"P"},{"k":"w","l":"I"},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Largest continent","n":4}},{"k":"w","l":"T"},{"k":"c","d":{"x":"Found at the beach","n":4}},{"k":"c","a":{"x":"Preposition for a place","n":2}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"c","a":{"x":"The Red Planet","n":4}},{"k":"w","l":"M"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"S"},{"k":"x"},{"k":"c","d":{"x":"Opposite of stop","n":2}},{"k":"w","l":"T"},{"k":"c","d":{"x":"Myself","n":2}},{"k":"c","a":{"x":"Salty water","n":3}},{"k":"w","l":"S"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Sparkling stone","n":3}},{"k":"w","l":"G"},{"k":"w","l":"E"},{"k":"w","l":"M"},{"k":"c","a":{"x":"Small hotel","n":3}},{"k":"w","l":"I"},{"k":"w","l":"N"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Single","n":3}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Put together","n":3}},{"k":"w","l":"A"},{"k":"w","l":"D"},{"k":"w","l":"D"}],"words":["ADD","ASIA","AT","CLOSE","EX","GEM","GO","HAT","HIRE","INN","IT","ITEM","KITTEN","LIT","MARS","ME","ONE","ORE","PIPE","RAP","RISEN","SAND","SEA","SHE","SKATE","SPA","SWITCH","TENT","TREND","WAX"]},{"R":11,"C":8,"cells":[{"k":"x"},{"k":"c","d":{"x":"Parent's sister","n":4}},{"k":"c","d":{"x":"Husband or wife","n":6}},{"k":"x"},{"k":"x"},{"k":"c","d":{"x":"Is, plural","n":3}},{"k":"c","d":{"x":"Why","n":6}},{"k":"c","d":{"p":"car","n":3,"x":"Four-wheeled vehicle"}},{"k":"c","a":{"x":"Pose a question","n":3}},{"k":"w","l":"A"},{"k":"w","l":"S"},{"k":"w","l":"K"},{"k":"c","a":{"x":"Curved line","n":3},"d":{"x":"Primate","n":3}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"C"},{"k":"c","a":{"x":"Opposite of down","n":2}},{"k":"w","l":"U"},{"k":"w","l":"P"},{"k":"c","a":{"x":"Size of a floor","n":4}},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"c","a":{"x":"Opposite of yes","n":2}},{"k":"w","l":"N"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Fruit shaped like a bulb","n":4}},{"k":"w","l":"P"},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"R"},{"k":"c","a":{"x":"Melody","n":4}},{"k":"w","l":"T"},{"k":"w","l":"U"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"c","d":{"x":"Give to charity","n":6}},{"k":"w","l":"S"},{"k":"c","d":{"x":"Concrete ingredient","n":6}},{"k":"x"},{"k":"c","d":{"x":"The Earth","n":5}},{"k":"w","l":"S"},{"k":"c","d":{"x":"Holding nothing","n":5}},{"k":"c","a":{"x":"Medic, for short","n":3}},{"k":"w","l":"D"},{"k":"w","l":"O"},{"k":"w","l":"C"},{"k":"c","a":{"x":"Tiny","n":3}},{"k":"w","l":"W"},{"k":"w","l":"E"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Single","n":3}},{"k":"w","l":"O"},{"k":"w","l":"N"},{"k":"w","l":"E"},{"k":"x"},{"k":"w","l":"O"},{"k":"c","a":{"x":"Fellows","n":3},"d":{"x":"We breathe it","n":3}},{"k":"w","l":"M"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"c","d":{"x":"Hot leaf drink","n":3}},{"k":"w","l":"M"},{"k":"c","a":{"x":"Hip-hop style","n":3}},{"k":"w","l":"R"},{"k":"w","l":"A"},{"k":"w","l":"P"},{"k":"c","a":{"x":"Had dinner","n":3}},{"k":"w","l":"A"},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"c","a":{"x":"Switched on","n":3}},{"k":"w","l":"L"},{"k":"w","l":"I"},{"k":"w","l":"T"},{"k":"c","a":{"x":"Number of fingers","n":3}},{"k":"w","l":"T"},{"k":"w","l":"E"},{"k":"w","l":"N"},{"k":"c","a":{"x":"Not wet","n":3}},{"k":"w","l":"D"},{"k":"w","l":"R"},{"k":"w","l":"Y"},{"k":"c","a":{"x":"Have a meal","n":3}},{"k":"w","l":"E"},{"k":"w","l":"A"},{"k":"w","l":"T"}],"words":["AIR","APE","ARC","ARE","AREA","ASK","ATE","AUNT","CAR","CEMENT","DOC","DONATE","DRY","EAT","EMPTY","LIT","MEN","NO","ONE","PEAR","RAP","REASON","SPOUSE","TEA","TEN","TUNE","UP","WEE","WORLD"]}]];
+const LEVEL_INFO = [
+  { n: 'Easy', c: '#36b86b' }, { n: 'Easy', c: '#36b86b' }, { n: 'Easy', c: '#36b86b' },
+  { n: 'Medium', c: '#ff9d1c' }, { n: 'Medium', c: '#ff9d1c' }, { n: 'Medium', c: '#ff9d1c' },
+  { n: 'Hard', c: '#e8453c' }, { n: 'Hard', c: '#e8453c' },
+  { n: 'Expert', c: '#7b4fc4' }, { n: 'Expert', c: '#7b4fc4' }
+];
+
+/* ============ sound ============ */
+let ac = null;
+function beep(f, d, type, v) {
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = type || 'sine'; o.frequency.value = f;
+    g.gain.value = v || .05; g.gain.exponentialRampToValueAtTime(.0001, ac.currentTime + d);
+    o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + d);
+  } catch (e) {}
+}
+const sfx = {
+  key: () => beep(880, .04, 'sine', .03),
+  word: () => { beep(660, .1, 'triangle', .07); setTimeout(() => beep(990, .16, 'triangle', .07), 90); },
+  bad: () => beep(220, .22, 'sawtooth', .05),
+  hint: () => { beep(784, .1, 'triangle', .07); setTimeout(() => beep(1046, .16, 'triangle', .07), 90); },
+  win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, .25, 'triangle', .08), i * 130))
+};
+
+/* ============ state ============ */
+let P = null, level = 0, variant = 0, R = 0, C = 0, cellPx = 48;
+let ans = [], cur = [], hinted = [], solvedW = [];      // per cell
+let words = [];                                       // { id, dir, cells[], clueCell, text, pic }
+let cellWords = [];                                   // per cell: { a: wordIndex|-1, d: wordIndex|-1 }
+let sel = -1, sdir = 'a', hints = 3, hintsUsed = 0, elapsed = 0, playing = false, checking = false, coachOn = false, coachI = 0;
+let progress = JSON.parse(store.get('cw-prog', '{}'));          // { stars:[], plays:[] }
+progress.stars = progress.stars || []; progress.plays = progress.plays || [];
+const saveProg = () => store.set('cw-prog', JSON.stringify(progress));
+
+/* ============ build ============ */
+const board = $('board'), scroller = $('scroller');
+let els = [];
+function pickVariant(lv) {
+  const list = PUZZLES[lv]; const n = (progress.plays[lv] || 0);
+  return n % list.length;
+}
+function startLevel(lv, v) {
+  level = lv; variant = v === undefined ? pickVariant(lv) : v; P = PUZZLES[lv][variant];
+  R = P.R; C = P.C;
+  ans = P.cells.map(c => c.k === 'w' ? c.l : ''); cur = ans.map(() => ''); hinted = ans.map(() => false); solvedW = [];
+  buildWords();
+  hints = 3; hintsUsed = 0; elapsed = 0; sel = -1; sdir = 'a'; checking = false; playing = true;
+  hide('menu'); hide('lvlScr'); hide('win');
+  buildBoard(); render(); save(); startCoach();
+}
+function buildWords() {
+  words = []; cellWords = ans.map(() => ({ a: -1, d: -1 }));
+  P.cells.forEach((cell, i) => {
+    if (cell.k !== 'c') return;
+    const r = (i / C) | 0, c = i % C;
+    for (const dir of ['a', 'd']) {
+      const e = cell[dir]; if (!e) continue;
+      const cells = []; let rr = r + (dir === 'd' ? 1 : 0), cc = c + (dir === 'a' ? 1 : 0);
+      while (rr < R && cc < C && P.cells[rr * C + cc].k === 'w') { cells.push(rr * C + cc); if (dir === 'a') cc++; else rr++; }
+      const w = { id: words.length, dir, cells, clueCell: i, text: e.x, pic: e.p || null };
+      words.push(w); cells.forEach(ci => { cellWords[ci][dir] = w.id; });
+    }
+  });
+}
+function fitCell() {
+  const W = Math.min(innerWidth, 560) - 22;
+  const topH = 44 + 46 + 44 + 8 * 3 + 6 + (document.getElementById('kb').offsetHeight || 150) + 24;
+  const H = Math.max(220, innerHeight - topH);
+  let px = Math.floor((W - 8) / C); px = Math.min(px, 70);
+  if (R * px > H) px = Math.max(46, Math.floor((H - 8) / R));
+  cellPx = Math.max(38, px);
+}
+function clueFont(text, w, h) {
+  // pick a font size so the text fits the box
+  for (let fs = Math.min(15, h * .6); fs >= 6; fs -= .5) {
+    const perLine = Math.max(3, Math.floor((w - 6) / (fs * .58)));
+    const ws = text.split(' '); let lines = 1, len = 0, ok = true;
+    for (const t of ws) {
+      if (t.length > perLine) { ok = false; break; }
+      if (len + t.length + (len ? 1 : 0) > perLine) { lines++; len = t.length; } else len += t.length + (len ? 1 : 0);
+    }
+    if (ok && lines * fs * 1.08 <= h - 2) return fs;
+  }
+  return 6;
+}
+function buildBoard() {
+  fitCell();
+  board.style.gridTemplateColumns = `repeat(${C}, ${cellPx}px)`; board.style.gridTemplateRows = `repeat(${R}, ${cellPx}px)`;
+  board.innerHTML = ''; els = [];
+  P.cells.forEach((cell, i) => {
+    const d = document.createElement('div'); d.dataset.i = i;
+    if (cell.k === 'w') { d.className = 'c w'; d.innerHTML = '<span class="ch"></span>'; d.firstChild.style.fontSize = Math.floor(cellPx * .56) + 'px'; }
+    else if (cell.k === 'x') d.className = 'c x';
+    else {
+      d.className = 'c k';
+      const both = cell.a && cell.d;
+      const mk = (e, dir) => {
+        const el = document.createElement('div'); el.className = 'cl ' + (both ? (dir === 'a' ? 'top split' : 'bot') : 'full'); el.dataset.dir = dir;
+        const h = both ? cellPx / 2 : cellPx;
+        if (e.p) { el.innerHTML = `<svg viewBox="0 0 64 64">${PICS[e.p] || ''}</svg>`; if (both) el.querySelector('svg').style.height = '86%'; }
+        else { el.textContent = e.x; el.style.fontSize = clueFont(e.x, cellPx, h) + 'px'; }
+        d.appendChild(el);
+        const ar = document.createElement('div'); ar.className = 'ar ' + (dir === 'a' ? 'r' : 'd');
+        if (dir === 'a') ar.style.top = (both ? cellPx * .25 : cellPx * .5) + 'px'; else ar.style.left = cellPx * .5 + 'px';
+        d.appendChild(ar);
+      };
+      if (cell.a) mk(cell.a, 'a'); if (cell.d) mk(cell.d, 'd');
+    }
+    board.appendChild(d); els.push(d);
+  });
+}
+const KB = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
+(function buildKb() {
+  const kb = $('kb');
+  KB.forEach((row, ri) => {
+    const r = document.createElement('div'); r.className = 'row';
+    for (const ch of row) { const b = document.createElement('button'); b.className = 'key'; b.textContent = ch; b.onclick = () => type(ch); r.appendChild(b); }
+    if (ri === 2) { const b = document.createElement('button'); b.className = 'key wide'; b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#c0345a" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12zM15 9l-4 6M11 9l4 6"/></svg>'; b.onclick = back; r.appendChild(b); }
+    kb.appendChild(r);
+  });
+})();
+
+/* ============ render ============ */
+const curWord = () => { if (sel < 0) return null; const id = cellWords[sel][sdir]; return id >= 0 ? words[id] : null; };
+function wordDone(w) { return w.cells.every(i => cur[i] === ans[i]); }
+function render() {
+  const w = curWord(); const inW = new Set(w ? w.cells : []);
+  P.cells.forEach((cell, i) => {
+    const d = els[i];
+    if (cell.k === 'w') {
+      let cls = 'c w';
+      if (inW.has(i)) cls += ' inword';
+      if (i === sel) cls += ' sel';
+      if (checking && cur[i] && cur[i] !== ans[i]) cls += ' bad';
+      if (hinted[i]) cls += ' hinted';
+      d.className = cls + (d.classList.contains('pop') ? ' pop' : '');
+      d.firstChild.textContent = cur[i];
+    } else if (cell.k === 'c') {
+      d.querySelectorAll('.cl').forEach(el => { const wi = words.find(x => x.clueCell === i && x.dir === el.dataset.dir); el.classList.toggle('on', !!(w && wi && wi.id === w.id)); });
+    }
+  });
+  const done = words.filter(wordDone).length;
+  $('prog').textContent = done + '/' + words.length;
+  $('hintN').textContent = hints; $('tHint').classList.toggle('off', hints <= 0);
+  $('lvl').innerHTML = 'Level ' + (level + 1) + '<small>' + LEVEL_INFO[level].n + '</small>';
+  $('time').textContent = fmt(elapsed);
+  const bar = $('bar');
+  if (w) {
+    bar.className = '';
+    const arrow = w.dir === 'a' ? '<path d="M4 12h14M13 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' : '<path d="M12 4v14M6 13l6 6 6-6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+    bar.innerHTML = `<span class="dir"><svg viewBox="0 0 24 24">${arrow}</svg></span>` + (w.pic ? `<span class="pic"><svg viewBox="0 0 64 64">${PICS[w.pic] || ''}</svg></span><span class="txt">Picture clue</span>` : `<span class="txt">${w.text}</span>`) + `<span class="len">${w.cells.length} letters</span>`;
+  } else { bar.className = 'empty'; bar.innerHTML = '<span class="dir"></span><span class="txt">Tap a square to begin</span>'; }
+}
+const fmt = t => { t = Math.floor(t); return String(Math.floor(t / 60)).padStart(2, '0') + ' : ' + String(t % 60).padStart(2, '0'); };
+
+/* ============ interaction ============ */
+function select(i, forceDir) {
+  const cw = cellWords[i];
+  if (forceDir && cw[forceDir] >= 0) sdir = forceDir;
+  else if (i === sel && cw.a >= 0 && cw.d >= 0) sdir = sdir === 'a' ? 'd' : 'a';
+  else if (cw[sdir] < 0) sdir = sdir === 'a' ? 'd' : 'a';
+  sel = i; checking = false; render(); scrollTo(i);
+}
+function scrollTo(i) {
+  const el = els[i]; if (!el) return;
+  const r = el.getBoundingClientRect(), s = scroller.getBoundingClientRect();
+  if (r.top < s.top + 6) scroller.scrollTop -= (s.top + 6 - r.top);
+  else if (r.bottom > s.bottom - 6) scroller.scrollTop += (r.bottom - s.bottom + 6);
+  if (r.left < s.left + 6) scroller.scrollLeft -= (s.left + 6 - r.left);
+  else if (r.right > s.right - 6) scroller.scrollLeft += (r.right - s.right + 6);
+}
+board.addEventListener('pointerdown', e => {
+  if (!playing || coachOn) return;
+  const d = e.target.closest('.c'); if (!d) return;
+  const i = +d.dataset.i, cell = P.cells[i];
+  if (cell.k === 'w') { select(i); sfx.key(); return; }
+  if (cell.k === 'c') {
+    const cands = words.filter(w => w.clueCell === i && w.cells.length);
+    if (!cands.length) return;
+    // the half that was tapped (top = across, bottom = down) when the cell holds two clues
+    let w = cands[0];
+    if (cands.length > 1) {
+      const r = d.getBoundingClientRect(); const topHalf = e.clientY < r.top + r.height / 2;
+      w = cands.find(x => x.dir === (topHalf ? 'a' : 'd')) || cands[0];
+    }
+    sdir = w.dir; const first = w.cells.find(ci => cur[ci] !== ans[ci]) ?? w.cells[0];
+    sel = first; checking = false; render(); scrollTo(first); sfx.key();
+  }
+});
+function type(ch) {
+  if (!playing || coachOn || sel < 0) return;
+  const w = curWord(); if (!w) return;
+  if (hinted[sel] && cur[sel] === ans[sel]) { advance(w); return; }
+  cur[sel] = ch; checking = false; sfx.key();
+  const el = els[sel]; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  // crossing word finished?
+  const finished = [];
+  for (const dir of ['a', 'd']) { const id = cellWords[sel][dir]; if (id >= 0 && wordDone(words[id]) && !solvedW.includes(id)) { solvedW.push(id); finished.push(words[id]); } }
+  render(); save();
+  if (finished.length) { finished.forEach(flashWord); sfx.word(); }
+  if (checkWin()) return;
+  if (finished.some(f => f.id === w.id)) nextWord(); else advance(w);
+}
+function advance(w) {
+  const k = w.cells.indexOf(sel);
+  // next empty/wrong cell after this one, else the next cell
+  for (let j = 1; j <= w.cells.length; j++) {
+    const ci = w.cells[(k + j) % w.cells.length];
+    if (cur[ci] !== ans[ci] && (k + j) < w.cells.length) { sel = ci; render(); scrollTo(ci); return; }
+  }
+  if (k < w.cells.length - 1) { sel = w.cells[k + 1]; render(); scrollTo(sel); }
+}
+function back() {
+  if (!playing || coachOn || sel < 0) return;
+  const w = curWord(); if (!w) return;
+  if (hinted[sel]) { const k = w.cells.indexOf(sel); if (k > 0) { sel = w.cells[k - 1]; render(); } return; }
+  if (cur[sel]) { cur[sel] = ''; solvedW = solvedW.filter(id => wordDone(words[id])); checking = false; render(); save(); return; }
+  const k = w.cells.indexOf(sel);
+  if (k > 0) { sel = w.cells[k - 1]; if (!hinted[sel]) { cur[sel] = ''; solvedW = solvedW.filter(id => wordDone(words[id])); } render(); save(); scrollTo(sel); }
+}
+function flashWord(w) { w.cells.forEach((ci, k) => { const el = els[ci]; setTimeout(() => { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }, k * 60); }); }
+function nextWord() {
+  // jump to the next clue that is not finished yet
+  const start = curWord() ? curWord().id : -1;
+  for (let j = 1; j <= words.length; j++) {
+    const w = words[(start + j) % words.length];
+    if (w.cells.length && !wordDone(w)) { sdir = w.dir; sel = w.cells.find(ci => cur[ci] !== ans[ci]); checking = false; render(); scrollTo(sel); return; }
+  }
+}
+$('tWord').onclick = () => { if (playing && !coachOn) nextWord(); };
+$('tCheck').onclick = () => {
+  if (!playing || coachOn) return;
+  checking = true; render();
+  const wrong = els.filter((e, i) => P.cells[i].k === 'w' && cur[i] && cur[i] !== ans[i]);
+  if (wrong.length) { sfx.bad(); wrong.forEach(e => { e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); }); }
+  else sfx.word();
+};
+$('tHint').onclick = () => {
+  if (!playing || coachOn || hints <= 0 || sel < 0) { if (sel < 0 && playing && !coachOn) { const b = $('bar'); b.classList.remove('empty'); } return; }
+  if (cur[sel] === ans[sel]) { const w = curWord(); const nx = w && w.cells.find(ci => cur[ci] !== ans[ci]); if (nx === undefined) return; sel = nx; }
+  cur[sel] = ans[sel]; hinted[sel] = true; hints--; hintsUsed++; checking = false; sfx.hint();
+  const el = els[sel]; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  const finished = [];
+  for (const dir of ['a', 'd']) { const id = cellWords[sel][dir]; if (id >= 0 && wordDone(words[id]) && !solvedW.includes(id)) { solvedW.push(id); finished.push(words[id]); } }
+  render(); save(); finished.forEach(flashWord);
+  checkWin();
+};
+function checkWin() {
+  for (let i = 0; i < ans.length; i++) if (ans[i] && cur[i] !== ans[i]) return false;
+  playing = false; store.set('cw-save', '');
+  const stars = hintsUsed === 0 ? 3 : hintsUsed <= 2 ? 2 : 1;
+  const old = progress.stars[level] || 0; if (stars > old) progress.stars[level] = stars;
+  progress.plays[level] = (progress.plays[level] || 0) + 1;
+  const key = 'best' + level; progress[key] = Math.min(progress[key] || 1e9, Math.floor(elapsed)); saveProg();
+  $('winStars').innerHTML = '★'.repeat(stars) + '<i>' + '★'.repeat(3 - stars) + '</i>';
+  $('winD').textContent = 'Level ' + (level + 1) + ' · ' + LEVEL_INFO[level].n;
+  $('winT').textContent = fmt(elapsed);
+  $('winBest').textContent = hintsUsed ? hintsUsed + (hintsUsed === 1 ? ' hint used' : ' hints used') : 'No hints used!';
+  $('bNext').style.display = level < PUZZLES.length - 1 ? '' : 'none';
+  sfx.win(); confetti(); setTimeout(() => show('win'), 800);
+  return true;
+}
+function confetti() {
+  const box = $('confetti'); const cols = ['#ff9d1c', '#2f8cf0', '#36b86b', '#e0406f', '#ffd24a', '#7b4fc4'];
+  for (let i = 0; i < 70; i++) {
+    const e = document.createElement('i'); e.style.left = Math.random() * 100 + '%'; e.style.background = cols[i % cols.length];
+    e.style.animationDuration = 1.8 + Math.random() * 1.6 + 's'; e.style.animationDelay = Math.random() * .5 + 's'; box.appendChild(e);
+  }
+  setTimeout(() => { box.innerHTML = ''; }, 4500);
+}
+
+/* ============ how to play (pops up every time a puzzle opens) ============ */
+const COACH = [
+  { sel: '#board', t: 'Each blue square is a <b>clue</b>. The <b>arrow</b> shows where the answer starts and which way it runs.' },
+  { sel: '#board', t: 'Some clues are <b>pictures</b>. Tap a clue square or a white square to pick a word.' },
+  { sel: '#kb', t: 'Type the letters with this keyboard. Tap a square twice to switch between across and down.' },
+  { sel: '#tools', t: '<b>Check</b> shows wrong letters, <b>Hint</b> reveals one letter (you get 3), and <b>Next</b> jumps to another word.' }
+];
+function coachStep() {
+  const c = $('coach');
+  if (coachI >= COACH.length) { c.classList.remove('on'); coachOn = false; last = performance.now(); return; }
+  const st = COACH[coachI], el = document.querySelector(st.sel), r = el.getBoundingClientRect(), h = $('hole'), b = $('bubble');
+  c.classList.add('on'); coachOn = true;
+  const pad = 6; h.style.left = r.left - pad + 'px'; h.style.top = r.top - pad + 'px'; h.style.width = r.width + pad * 2 + 'px'; h.style.height = r.height + pad * 2 + 'px';
+  b.innerHTML = st.t + `<small>Tap to continue (${coachI + 1}/${COACH.length})</small>`;
+  b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+  const below = r.top + r.height / 2 < innerHeight * .5;
+  if (below) b.style.top = Math.min(innerHeight - b.offsetHeight - 10, r.bottom + 18) + 'px';
+  else b.style.top = Math.max(10, r.top - b.offsetHeight - 18) + 'px';
+}
+function startCoach() { coachI = 0; setTimeout(coachStep, 60); }
+$('coach').addEventListener('pointerdown', e => { e.preventDefault(); coachI++; coachStep(); beep(900, .04); });
+
+/* ============ save / flow ============ */
+const show = id => $(id).classList.remove('hidden'), hide = id => $(id).classList.add('hidden');
+function save() {
+  if (!playing) return;
+  store.set('cw-save', JSON.stringify({ level, variant, cur, hinted, hints, hintsUsed, elapsed, solvedW }));
+}
+function loadSave() {
+  try {
+    const s = JSON.parse(store.get('cw-save', '')); if (!s || !PUZZLES[s.level] || !PUZZLES[s.level][s.variant]) return false;
+    startLevel(s.level, s.variant);
+    cur = s.cur; hinted = s.hinted; hints = s.hints; hintsUsed = s.hintsUsed; elapsed = s.elapsed; solvedW = s.solvedW || [];
+    render(); return true;
+  } catch (e) { return false; }
+}
+function unlocked(i) { return i === 0 || (progress.stars[i - 1] || 0) > 0; }
+function buildLevels() {
+  $('levels').innerHTML = PUZZLES.map((list, i) => {
+    const open = unlocked(i), st = progress.stars[i] || 0, p = list[0];
+    return `<button class="lv ${open ? '' : 'lock'}" data-i="${i}" style="background:${LEVEL_INFO[i].c}"><b>${i + 1}</b><span>${LEVEL_INFO[i].n} · ${p.C - 1}×${p.R - 1}</span>${open ? `<div class="st">${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></div>` : ''}</button>`;
+  }).join('');
+}
+function toMenu() {
+  if (playing) save();
+  playing = false; hide('win'); hide('lvlScr'); show('menu'); $('bCont').style.display = store.get('cw-save', '') ? '' : 'none';
+}
+$('bPlay').onclick = () => { hide('menu'); buildLevels(); show('lvlScr'); };
+$('bLvBack').onclick = toMenu;
+$('levels').onclick = e => { const b = e.target.closest('.lv'); if (b && !b.classList.contains('lock')) startLevel(+b.dataset.i); };
+$('bCont').onclick = () => { if (!loadSave()) toMenu(); };
+$('home').onclick = () => { if (coachOn) return; toMenu(); };
+$('bNext').onclick = () => startLevel(level + 1);
+$('bAgain').onclick = () => startLevel(level, (variant + 1) % PUZZLES[level].length);
+$('bWinMenu').onclick = () => { hide('win'); buildLevels(); show('lvlScr'); };
+addEventListener('keydown', e => {
+  if (!playing) return;
+  if (coachOn) { if (e.key === ' ' || e.key === 'Enter') { coachI++; coachStep(); } return; }
+  if (/^[a-zA-Z]$/.test(e.key) && !e.ctrlKey && !e.metaKey) { type(e.key.toUpperCase()); return; }
+  if (e.key === 'Backspace' || e.key === 'Delete') { back(); return; }
+  if (e.key === 'Tab') { e.preventDefault(); nextWord(); return; }
+  const mv = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[e.key];
+  if (mv && sel >= 0) {
+    e.preventDefault(); let r = ((sel / C) | 0) + mv[0], c = (sel % C) + mv[1];
+    while (r >= 0 && r < R && c >= 0 && c < C) { if (P.cells[r * C + c].k === 'w') { select(r * C + c, mv[0] ? 'd' : 'a'); break; } r += mv[0]; c += mv[1]; }
+  }
+});
+let last = performance.now();
+setInterval(() => { const n = performance.now(), dt = (n - last) / 1000; last = n; if (playing && !coachOn && !document.hidden && dt < 2) { elapsed += dt; $('time').textContent = fmt(elapsed); if (((elapsed | 0) % 5) === 0) save(); } }, 250);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+addEventListener('resize', () => { if (P) { buildBoard(); render(); } });
+
+window.__cw = { start: (l, v) => startLevel(l, v), get s() { return { level, variant, R, C, playing, sel, sdir, hints, words: words.length, done: words.filter(wordDone).length }; }, solve: () => { cur = ans.slice(); render(); checkWin(); }, fill: n => { let k = 0; for (let i = 0; i < ans.length && k < n; i++) if (ans[i] && cur[i] !== ans[i]) { cur[i] = ans[i]; k++; } render(); }, ans: () => ans, words: () => words, type, select, PUZZLES };
+toMenu();
+})();
+</script>
+</body>
+</html>
