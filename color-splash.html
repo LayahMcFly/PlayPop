@@ -60,6 +60,7 @@ button { font: inherit; border: 0; cursor: pointer; color: inherit; background: 
 @keyframes pulse { 50% { fill: #ffe14a; } }
 @keyframes pop { 40% { filter: brightness(1.35); } }
 #zbtns { position: absolute; right: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 6px; }
+#zbtns button.on { background: #ffd23f; }
 #zbtns button { width: 36px; height: 36px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.25); font-size: 22px; font-weight: 700; line-height: 1; }
 #pal { width: 100%; flex: none; display: flex; gap: 10px; overflow-x: auto; padding: 12px 6px 8px; margin-top: 6px; scrollbar-width: none; }
 #pal::-webkit-scrollbar { display: none; }
@@ -135,7 +136,7 @@ h1 { margin: 0; font-size: 52px; line-height: 1; color: #ffd451; text-shadow: 0 
     <button class="rb yel" id="nRestart" aria-label="Restart"><svg viewBox="0 0 24 24" fill="none" stroke="#123" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 2.6 5.9M4 6v6h6"/></svg></button>
     <button class="rb hint" id="nHint" aria-label="Hint"><svg viewBox="0 0 24 24" fill="#ffd451" stroke="#8a6200" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0-3.5 10.9V17h7v-3.1A6 6 0 0 0 12 3z"/><path d="M9.5 20h5" stroke-linecap="round"/></svg><span class="n" id="nHintN">3</span></button>
   </div>
-  <div id="cbnStage"><div id="zw"><div id="zin"></div><div id="zbtns"><button id="zIn">+</button><button id="zOut">&minus;</button></div></div></div>
+  <div id="cbnStage"><div id="zw"><div id="zin"></div><div id="zbtns"><button id="zMove" aria-label="Move around" title="Move around">&#9995;</button><button id="zIn">+</button><button id="zOut">&minus;</button></div></div></div>
   <div id="pal"></div>
   <div id="toast"></div>
 </div></div>
@@ -405,7 +406,12 @@ $('nHint').onclick = () => {
 /* zoom and pan */
 function fitZoom(reset) {
   const W = zw.clientWidth, H = zw.clientHeight; if (!W) return; iw = Math.min(W, H); zin.style.width = iw + 'px'; zin.style.height = iw + 'px';
-  if (reset) zs = { s: 1, x: 0, y: 0 }; clampZ(); applyZ();
+  if (reset) {
+    zs = { s: 2.6, x: 0, y: 0 };
+    const r = nPic && (nPic.regions.find((q, j) => q.k === sel && !nf[j]) || nPic.regions[0]);
+    if (r) { zs.x = W / 2 - r.x / V * iw * zs.s; zs.y = H / 2 - r.y / V * iw * zs.s; }
+  }
+  clampZ(); applyZ();
 }
 function clampZ() { const W = zw.clientWidth, H = zw.clientHeight, w = iw * zs.s; zs.x = w <= W ? (W - w) / 2 : Math.min(0, Math.max(W - w, zs.x)); zs.y = w <= H ? (H - w) / 2 : Math.min(0, Math.max(H - w, zs.y)); }
 function applyZ() { zin.style.transform = `translate(${zs.x}px,${zs.y}px) scale(${zs.s})`; zin.classList.toggle('far', zs.s < 2.2); }
@@ -413,7 +419,8 @@ function zoomAt(cx, cy, s2) { s2 = Math.max(1, Math.min(10, s2)); const px = (cx
 function zoomTo(px, py, s2) { s2 = Math.min(10, s2); zs.s = s2; zs.x = zw.clientWidth / 2 - px * s2; zs.y = zw.clientHeight / 2 - py * s2; clampZ(); zin.style.transition = 'transform .35s'; applyZ(); setTimeout(() => { zin.style.transition = ''; }, 380); }
 $('zIn').onclick = () => zoomAt(zw.clientWidth / 2, zw.clientHeight / 2, zs.s * 1.6); $('zOut').onclick = () => zoomAt(zw.clientWidth / 2, zw.clientHeight / 2, zs.s / 1.6);
 zw.addEventListener('wheel', e => { e.preventDefault(); const r = zw.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, zs.s * (e.deltaY < 0 ? 1.2 : 1 / 1.2)); }, { passive: false });
-const ptrs = new Map(); let gs = null;
+const ptrs = new Map(); let gs = null, moveMode = false;
+$('zMove').onclick = () => { moveMode = !moveMode; $('zMove').classList.toggle('on', moveMode); toast(moveMode ? 'Move mode: drag to scroll' : 'Paint mode: drag over a shape to color'); };
 const mid = () => { const a = [...ptrs.values()]; return [(a[0].x + a[1].x) / 2, (a[0].y + a[1].y) / 2, Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y)]; };
 zw.addEventListener('pointerdown', e => {
   if (e.target.closest('#zbtns') || coachOn) return; zw.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -421,7 +428,7 @@ zw.addEventListener('pointerdown', e => {
   if (ptrs.size === 1) {
     gs = { moved: false, sx: e.clientX, sy: e.clientY, x0: zs.x, y0: zs.y, multi: false, paint: false };
     const i = regAt(e.clientX, e.clientY);
-    if (i >= 0 && !nf[i] && nPic.regions[i].k === sel) { gs.paint = true; paintReg(i); }
+    if (!moveMode && i >= 0 && !nf[i] && nPic.regions[i].k === sel) { gs.paint = true; paintReg(i); }
   } else if (ptrs.size === 2) { const m = mid(); gs.multi = true; gs.moved = true; gs.paint = false; gs.s0 = zs.s; gs.d0 = m[2] || 1; gs.cx = (m[0] - r.left - zs.x) / zs.s; gs.cy = (m[1] - r.top - zs.y) / zs.s; }
 });
 zw.addEventListener('pointermove', e => {
@@ -432,7 +439,7 @@ zw.addEventListener('pointermove', e => {
 });
 const zup = e => {
   if (!ptrs.has(e.pointerId)) return; const wasTap = gs && !gs.moved && !gs.paint && ptrs.size === 1 && e.type === 'pointerup'; ptrs.delete(e.pointerId);
-  if (wasTap) { const i = regAt(e.clientX, e.clientY); if (i >= 0 && !nf[i] && nPic.regions[i].k !== sel) { sfx.bad(); toast(`That shape is number ${nPic.regions[i].k}`); } }
+  if (wasTap) { const i = regAt(e.clientX, e.clientY); if (moveMode && i >= 0 && !nf[i] && nPic.regions[i].k === sel) paintReg(i); else if (i >= 0 && !nf[i] && nPic.regions[i].k !== sel) { sfx.bad(); toast(`That shape is number ${nPic.regions[i].k}`); } }
   if (!ptrs.size) gs = null;
 };
 zw.addEventListener('pointerup', zup); zw.addEventListener('pointercancel', zup);
