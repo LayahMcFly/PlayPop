@@ -1,7 +1,7 @@
 /* PlayPop offline helper: keeps a copy of the site so it opens without WiFi. */
 const CACHE = 'playpop-v1';
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'].map(u => new Request(u, { cache: 'reload' })))).catch(() => {}).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all(['./', './index.html', './party/'].map(u => c.add(new Request(u, { cache: 'reload' })).catch(() => {})))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
