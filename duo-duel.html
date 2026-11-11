@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Duo Duel</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #14285a; font-family: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #fff; }
+#wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+canvas { display: block; }
+.ov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(10, 20, 60, .62); backdrop-filter: blur(3px); z-index: 10; animation: fade .2s; }
+.ov.hidden { display: none; }
+@keyframes fade { from { opacity: 0; } }
+.panel { width: min(100%, 390px); max-height: 97dvh; overflow: auto; background: #fff; color: #26384c; border-radius: 28px; padding: 20px 18px 22px; text-align: center; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.4); animation: rise .3s cubic-bezier(.2,1.3,.4,1); }
+@keyframes rise { from { transform: translateY(26px) scale(.94); opacity: 0; } }
+.panel h1 { margin: 0; font-size: 42px; line-height: 1; color: #2f8cf0; text-shadow: 0 3px 0 #cfe6fc; }
+.panel h1 span { color: #ff8a1f; text-shadow: 0 3px 0 #ffe0c2; }
+.panel h2 { margin: 0; font-size: 32px; color: #2f8cf0; }
+.panel p { margin: 0; font-size: 16px; font-weight: 500; color: #51647a; line-height: 1.3; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.g { border: 0; border-radius: 18px; padding: 12px 6px 10px; font-family: inherit; cursor: pointer; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.g:active { transform: translateY(4px); }
+.g i { font-style: normal; font-size: 38px; line-height: 1.1; }
+.g b { font-size: 19px; }
+.g small { font-size: 13px; font-weight: 600; opacity: .92; }
+.btn { height: 56px; border-radius: 18px; font-size: 23px; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; border: 0; cursor: pointer; font-family: inherit; background: #36b86b; box-shadow: 0 6px 0 #1f8a45; }
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #1f8a45; }
+.btn.alt { background: #edf3f9; color: #3b5470; box-shadow: 0 6px 0 #cfdbe8; height: 48px; font-size: 19px; }
+.btn.alt:active { box-shadow: 0 2px 0 #cfdbe8; }
+.how { display: flex; flex-direction: column; gap: 9px; text-align: left; font-size: 16px; font-weight: 600; color: #3b4f68; }
+.how div { display: flex; align-items: center; gap: 11px; }
+.how i { flex: none; width: 42px; height: 42px; border-radius: 13px; background: #e6f3ff; display: grid; place-items: center; font-style: normal; font-size: 23px; }
+.ctrl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; font-weight: 600; text-align: left; }
+.ctrl div { border-radius: 14px; padding: 8px 10px; line-height: 1.3; }
+.ctrl .a { background: #e3f0ff; color: #1d5fae; } .ctrl .b { background: #fff0e0; color: #b35a00; }
+.ctrl kbd { font-family: inherit; background: #fff; border-radius: 6px; padding: 0 5px; box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+.note { font-size: 13px !important; color: #7b8da3 !important; }
+.big { font-size: 64px; line-height: 1.1; }
+.score { font-size: 38px; font-weight: 700; color: #26384c; }
+#home { position: fixed; left: 8px; top: 8px; z-index: 5; width: 40px; height: 40px; border-radius: 13px; background: rgba(255,255,255,.22); display: none; place-items: center; border: 0; cursor: pointer; }
+body.play #home { display: grid; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<button id="home" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7M6 10v9h4v-5h4v5h4v-9"/></svg></button>
+
+<div class="ov" id="menu">
+  <div class="panel">
+    <h1>Duo <span>Duel</span></h1>
+    <p>Two players, one screen. Pick a game!</p>
+    <div class="grid" id="grid"></div>
+    <p class="note">PC: Player 1 uses <b>W A S D</b> + Space, Player 2 uses <b>arrow keys</b> + Enter.<br>Phone: each player uses their own half of the screen.</p>
+  </div>
+</div>
+<div class="ov hidden" id="tut">
+  <div class="panel">
+    <div class="big" id="tEmoji"></div>
+    <h2 id="tName"></h2>
+    <div class="how" id="tHow"></div>
+    <div class="ctrl" id="tCtrl"></div>
+    <button class="btn" id="tGo">Let's play!</button>
+    <button class="btn alt" id="tBack">Back</button>
+  </div>
+</div>
+<div class="ov hidden" id="over">
+  <div class="panel">
+    <div class="big" id="oEmoji"></div>
+    <h2 id="oTitle"></h2>
+    <div class="score" id="oScore"></div>
+    <p id="oRec"></p>
+    <button class="btn" id="oAgain">Rematch</button>
+    <button class="btn alt" id="oMenu">Menu</button>
+  </div>
+</div>
+
+<script>
+/* ---- shared icon set (flat SVG, 48x48) ---- */
+const IC = {
+  tree: '<path d="M21 34h6v10h-6z" fill="#8a5a2b"/><path d="M24 3 40 19H8z" fill="#3bbd54"/><path d="M24 11 43 30H5z" fill="#2fa845"/><path d="M24 19 46 39H2z" fill="#1f8a37"/>',
+  hand: '<rect x="18" y="5" width="12" height="26" rx="6" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><rect x="11" y="23" width="26" height="21" rx="9" fill="#ffd9a8" stroke="#d19a5b" stroke-width="2.5"/><path d="M19 30v8M24 30v8M29 30v8" stroke="#e9b87c" stroke-width="2" stroke-linecap="round"/>',
+  tile: '<rect x="5" y="7" width="38" height="36" rx="9" fill="#1d7f33"/><rect x="5" y="4" width="38" height="36" rx="9" fill="#42c457"/><rect x="11" y="9" width="26" height="8" rx="4" fill="#fff" opacity=".3"/>',
+  star: '<path d="m24 4 5.8 12.6 13.7 1.6-10.2 9.3 2.8 13.5L24 34l-12.1 7 2.8-13.5L4.5 18.2l13.7-1.6z" fill="#ffc933" stroke="#e39a00" stroke-width="2.5" stroke-linejoin="round"/>',
+  bulb: '<path d="M24 4a14 14 0 0 0-8 25.5V33h16v-3.5A14 14 0 0 0 24 4z" fill="#ffe066" stroke="#e0a800" stroke-width="2.5" stroke-linejoin="round"/><rect x="16" y="34" width="16" height="8" rx="3" fill="#aab6c4"/><path d="M20 15c-2 2-3 4-3 6" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/>',
+  target: '<circle cx="24" cy="24" r="19" fill="#ff5a4d"/><circle cx="24" cy="24" r="13" fill="#fff"/><circle cx="24" cy="24" r="7.5" fill="#ff5a4d"/><circle cx="24" cy="24" r="2.5" fill="#fff"/>',
+  coin: '<circle cx="24" cy="24" r="19" fill="#ffc933" stroke="#e08a00" stroke-width="3"/><circle cx="24" cy="24" r="12" fill="none" stroke="#e08a00" stroke-width="2.5"/><path d="M19 17c3-2 8-1 9 2" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".8"/>',
+  flame: '<path d="M24 3c2 10 15 14 15 28a15 15 0 0 1-30 0c0-7 4-10 7-16 2 4 3 6 4 8 3-6 4-12 4-20z" fill="#ff7a1a"/><path d="M24 22c1 6 8 8 8 16a8 8 0 0 1-16 0c0-4 3-6 4-9 2 2 3 3 4 4 0-3 0-7 0-11z" fill="#ffd04a"/>',
+  shuffle: '<g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 14h8c9 0 11 20 20 20h5M5 34h8c3 0 5-2 7-5M26 19c2-3 4-5 7-5h5"/></g><path d="M36 7l8 7-8 7zM36 27l8 7-8 7z" fill="#fff"/>',
+  bubble: '<circle cx="24" cy="24" r="19" fill="#bfe8ff" fill-opacity=".55" stroke="#3fa4ea" stroke-width="3"/><path d="M13 22a11 11 0 0 1 8-9" stroke="#fff" stroke-width="3.5" stroke-linecap="round" fill="none"/><circle cx="31" cy="32" r="2.5" fill="#fff" opacity=".8"/>',
+  timer: '<rect x="19" y="3" width="10" height="6" rx="2" fill="#5b6b82"/><circle cx="24" cy="27" r="17" fill="#fff" stroke="#3b4f68" stroke-width="3"/><path d="M24 27V16M24 27l8 5" stroke="#e0453c" stroke-width="3.5" stroke-linecap="round"/><circle cx="24" cy="27" r="2.5" fill="#3b4f68"/>',
+  ball: '<circle cx="24" cy="24" r="19" fill="#ff8a2a" stroke="#a84600" stroke-width="2.5"/><g fill="none" stroke="#7a3300" stroke-width="2.5" stroke-linecap="round"><path d="M24 5v38M5 24h38M9 11c8 7 8 19 0 26M39 11c-8 7-8 19 0 26"/></g>',
+  sparkle: '<path d="M22 3l4.5 15.5L42 23l-15.5 4.5L22 43l-4.5-15.5L2 23l15.5-4.5z" fill="#ffd84d" stroke="#f0a800" stroke-width="2" stroke-linejoin="round"/><path d="M38 4l1.8 5.2L45 11l-5.2 1.8L38 18l-1.8-5.2L31 11l5.2-1.8z" fill="#fff3a8"/>',
+  heart: '<path d="M24 42C6 29 3 17 10 10c6-5 12-2 14 3 2-5 8-8 14-3 7 7 4 19-14 32z" fill="#ff4a6a" stroke="#d92a4c" stroke-width="2.5" stroke-linejoin="round"/><path d="M13 16c1-3 3-4 6-4" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".7"/>',
+  bow: '<path d="M13 5c24 8 24 30 0 38" fill="none" stroke="#8a5a2b" stroke-width="4.5" stroke-linecap="round"/><path d="M13 5v38" stroke="#dfe6ee" stroke-width="2"/><path d="M5 24h35" stroke="#5b6b82" stroke-width="3" stroke-linecap="round"/><path d="M44 24l-9-6v12z" fill="#5b6b82"/><path d="M5 24l-3-4M5 24l-3 4M10 24l-3-4M10 24l-3 4" stroke="#ff5a4d" stroke-width="2.5" stroke-linecap="round"/>',
+  rocket: '<path d="M14 28 5 40l11-3zM34 28l9 12-11-3z" fill="#ff5a4d"/><path d="M24 3c10 6 12 20 10 32H14C12 23 14 9 24 3z" fill="#eef3fa" stroke="#9aa8bb" stroke-width="2"/><path d="M24 3c4 3 7 7 8 12H16c1-5 4-9 8-12z" fill="#ff5a4d"/><circle cx="24" cy="23" r="5" fill="#5ec8ff" stroke="#3b7bb0" stroke-width="2"/><path d="M18 38h12l-6 9z" fill="#ffb02e"/>',
+  board: '<g transform="rotate(-32 24 24)"><rect x="2" y="17" width="44" height="14" rx="7" fill="#2e9bd6" stroke="#176a9a" stroke-width="2.5"/><rect x="9" y="21" width="30" height="6" rx="3" fill="#fff" opacity=".35"/><circle cx="14" cy="24" r="2.6" fill="#fff"/><circle cx="34" cy="24" r="2.6" fill="#fff"/></g>',
+  trophy: '<path d="M14 6h20v14c0 8-5 12-10 12s-10-4-10-12z" fill="#ffc933" stroke="#e09b00" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 10H6c0 8 3 12 9 13M34 10h8c0 8-3 12-9 13" fill="none" stroke="#e09b00" stroke-width="3" stroke-linecap="round"/><rect x="21" y="32" width="6" height="6" fill="#e09b00"/><rect x="13" y="38" width="22" height="6" rx="2.5" fill="#e09b00"/><path d="M19 11v9" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>',
+  rope: '<path d="M3 31C12 12 20 42 30 22S40 22 45 17" fill="none" stroke="#a5703a" stroke-width="8" stroke-linecap="round"/><path d="M3 31C12 12 20 42 30 22S40 22 45 17" fill="none" stroke="#d9a566" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 6"/><circle cx="24" cy="26" r="5" fill="#ff4a4a"/>',
+  bolt: '<path d="M28 2 9 27h12l-4 19 22-27H26z" fill="#ffc933" stroke="#e09b00" stroke-width="2.5" stroke-linejoin="round"/>',
+  flag: '<rect x="9" y="4" width="4.5" height="40" rx="2" fill="#6b7a8c"/><path d="M13 7h28l-7 9 7 9H13z" fill="#ff4a4a" stroke="#c92d2d" stroke-width="2" stroke-linejoin="round"/>',
+  cross: '<path d="M10 10l28 28M38 10 10 38" stroke="#2f7bff" stroke-width="9" stroke-linecap="round"/>',
+  ring: '<circle cx="24" cy="24" r="14" fill="none" stroke="#ff9a1c" stroke-width="9"/>',
+  red: '<circle cx="24" cy="24" r="19" fill="#ef4444" stroke="#b91c1c" stroke-width="2.5"/><circle cx="24" cy="24" r="11" fill="none" stroke="#b91c1c" stroke-width="2.5" opacity=".5"/><path d="M13 20a12 12 0 0 1 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>',
+  green: '<circle cx="24" cy="24" r="19" fill="#22c55e" stroke="#15803d" stroke-width="2.5"/><circle cx="24" cy="24" r="11" fill="none" stroke="#15803d" stroke-width="2.5" opacity=".5"/><path d="M13 20a12 12 0 0 1 8-8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".6"/>',
+  link: '<rect x="3" y="15" width="25" height="18" rx="9" fill="none" stroke="#3b4f68" stroke-width="5"/><rect x="20" y="15" width="25" height="18" rx="9" fill="none" stroke="#2f7bff" stroke-width="5"/>',
+  down: '<path d="M24 5v28" stroke="#2f7bff" stroke-width="8" stroke-linecap="round"/><path d="M11 24l13 14 13-14" fill="none" stroke="#2f7bff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>',
+  rock: '<path d="M6 34l5-17 13-8 14 6 5 16-9 11H14z" fill="#a3acb7" stroke="#5d6773" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 20l8-5M16 34l8-6 9 3" fill="none" stroke="#6f7a86" stroke-width="2.5" stroke-linecap="round"/><path d="M12 24l4-6" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".5"/>',
+  paper: '<path d="M10 4h20l9 9v31H10z" fill="#fff" stroke="#8a99ad" stroke-width="2.5" stroke-linejoin="round"/><path d="M30 4v9h9" fill="#dfe8f3" stroke="#8a99ad" stroke-width="2.5" stroke-linejoin="round"/><path d="M16 22h17M16 29h17M16 36h11" stroke="#8a99ad" stroke-width="3" stroke-linecap="round"/>',
+  scissors: '<path d="M15 4l16 24M33 4 17 28" stroke="#9aa8bb" stroke-width="5.5" stroke-linecap="round"/><circle cx="14" cy="37" r="7" fill="none" stroke="#ff4a6a" stroke-width="5"/><circle cx="34" cy="37" r="7" fill="none" stroke="#ff4a6a" stroke-width="5"/><circle cx="24" cy="21" r="2.5" fill="#5b6b82"/>',
+  lock: '<path d="M16 22v-6a8 8 0 0 1 16 0v6" fill="none" stroke="#8a6d00" stroke-width="4.5" stroke-linecap="round"/><rect x="9" y="21" width="30" height="22" rx="5" fill="#ffc933" stroke="#e09b00" stroke-width="2.5"/><circle cx="24" cy="30" r="3.5" fill="#8a6d00"/><path d="M24 31v6" stroke="#8a6d00" stroke-width="3.5" stroke-linecap="round"/>',
+  eyes: '<path d="M2 24C9 11 39 11 46 24 39 37 9 37 2 24z" fill="#fff" stroke="#3b4f68" stroke-width="2.5" stroke-linejoin="round"/><circle cx="24" cy="24" r="8.5" fill="#3b7bff"/><circle cx="24" cy="24" r="4" fill="#14213d"/><circle cx="21.5" cy="21.5" r="2" fill="#fff"/>',
+  ban: '<circle cx="24" cy="24" r="17" fill="none" stroke="#e0453c" stroke-width="6"/><path d="M12 12l24 24" stroke="#e0453c" stroke-width="6" stroke-linecap="round"/>',
+  paddle: '<path d="M27 28 40 41" stroke="#9a6a3a" stroke-width="7" stroke-linecap="round"/><circle cx="20" cy="19" r="15" fill="#e0453c" stroke="#9a2a22" stroke-width="2.5"/><path d="M11 12a12 12 0 0 1 8-5" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".5"/><circle cx="39" cy="12" r="5" fill="#fff" stroke="#b9c4d2" stroke-width="2"/>',
+  cube: '<path d="M24 4 42 13v22L24 44 6 35V13z" fill="#ff9a1c" stroke="#b86100" stroke-width="2.5" stroke-linejoin="round"/><path d="M6 13l18 9 18-9M24 22v22" fill="none" stroke="#b86100" stroke-width="2.5"/>',
+  gamepad: '<rect x="3" y="12" width="42" height="25" rx="12" fill="#7b4fe0" stroke="#4b2ba8" stroke-width="2.5"/><path d="M15 19v10M10 24h10" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><circle cx="32" cy="21" r="2.8" fill="#ffc933"/><circle cx="37" cy="27" r="2.8" fill="#4ade80"/>',
+  dice: '<rect x="5" y="5" width="38" height="38" rx="9" fill="#fff" stroke="#6b5fd6" stroke-width="3"/><g fill="#6b5fd6"><circle cx="15" cy="15" r="3.4"/><circle cx="33" cy="15" r="3.4"/><circle cx="24" cy="24" r="3.4"/><circle cx="15" cy="33" r="3.4"/><circle cx="33" cy="33" r="3.4"/></g>',
+  swap: '<g fill="none" stroke="#6b5fd6" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17h32M30 8l9 9-9 9M42 33H10M18 24l-9 9 9 9"/></g>'
+};
+const _icImgs = {};
+const ic = (k, size) => '<svg class="ic" viewBox="0 0 48 48"' + (size ? ' width="' + size + '" height="' + size + '"' : '') + ' aria-hidden="true">' + IC[k] + '</svg>';
+function icImg(k) { let m = _icImgs[k]; if (!m) { m = _icImgs[k] = new Image(); m.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="96" height="96">' + IC[k] + '</svg>'); } return m; }
+function drawIc(c, k, x, y, size) { const m = icImg(k); if (m.complete && m.naturalWidth) c.drawImage(m, x - size / 2, y - size / 2, size, size); }
+const _icCss = document.createElement('style'); _icCss.textContent = '.ic{vertical-align:-.14em;display:inline-block}.ic:not([width]){width:1em;height:1em}'; document.head.appendChild(_icCss);
+
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const W = 540, H = 960, MID = 480;
+const cv = $('c'), ctx = cv.getContext('2d');
+let scale = 1;
+function resize() { const s = Math.min(innerWidth / W, innerHeight / H), d = Math.min(devicePixelRatio || 1, 2); scale = s; cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px'; cv.width = Math.round(W * s * d); cv.height = Math.round(H * s * d); ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0); }
+addEventListener('resize', resize); resize();
+
+const C1 = '#3f9bff', C1d = '#1b5fc2', C2 = '#ff9a2e', C2d = '#d9610a';
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const FONT = "'Fredoka', system-ui, sans-serif";
+
+/* ---------- sound ---------- */
+let ac = null;
+function tone(f, d, t, v, f2) { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(), n = ac.currentTime; o.type = t || 'sine'; o.frequency.setValueAtTime(f, n); if (f2) o.frequency.exponentialRampToValueAtTime(f2, n + d); g.gain.setValueAtTime(v || .08, n); g.gain.exponentialRampToValueAtTime(.0001, n + d); o.connect(g).connect(ac.destination); o.start(n); o.stop(n + d + .02); } catch (e) {} }
+const sfx = {
+  tap: p => tone(p ? 520 : 440, .05, 'square', .035, p ? 640 : 540),
+  place: () => tone(300, .09, 'triangle', .12, 180),
+  tick: () => tone(660, .08, 'sine', .08),
+  go: () => tone(990, .25, 'square', .06),
+  win: () => { tone(523, .12, 'triangle', .1); setTimeout(() => tone(659, .12, 'triangle', .1), 110); setTimeout(() => tone(784, .22, 'triangle', .1), 220); },
+  lose: () => tone(240, .3, 'sawtooth', .05, 110),
+  bounce: () => tone(700, .05, 'square', .04),
+  fin: () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, .2, 'triangle', .1), i * 120)); }
+};
+
+/* ---------- input mode: touch rotates Player 2's side so they can read it facing the other way ---------- */
+let touchMode = false; try { touchMode = matchMedia('(pointer:coarse)').matches; } catch (e) {}
+const held = [{}, {}];
+const KEYS = { a: [0, 'L'], d: [0, 'R'], w: [0, 'U'], s: [0, 'D'], ' ': [0, 'A'], ArrowLeft: [1, 'L'], ArrowRight: [1, 'R'], ArrowUp: [1, 'U'], ArrowDown: [1, 'D'], Enter: [1, 'A'] };
+
+/* draw in "player frame": the bottom half (y 480-960) is Player 1's side; Player 2's side is the same frame turned 180 degrees */
+let curP = 0;
+function side(p, fn) { ctx.save(); curP = p; if (p) { ctx.translate(W, H); ctx.rotate(Math.PI); } fn(); ctx.restore(); curP = 0; }
+function txt(s, x, y, size, color, o) {
+  o = o || {}; ctx.save(); ctx.translate(x, y); if (curP && !touchMode) ctx.rotate(Math.PI);
+  ctx.textAlign = o.align || 'center'; ctx.textBaseline = 'middle'; ctx.font = `700 ${size}px ${FONT}`;
+  if (o.alpha != null) ctx.globalAlpha = o.alpha;
+  if (o.stroke) { ctx.lineWidth = o.sw || 6; ctx.strokeStyle = o.stroke; ctx.lineJoin = 'round'; ctx.strokeText(s, 0, 0); }
+  ctx.fillStyle = color || '#fff'; ctx.fillText(s, 0, 0); ctx.restore();
+}
+function icn(k, x, y, size, alpha) { ctx.save(); ctx.translate(x, y); if (curP && !touchMode) ctx.rotate(Math.PI); if (alpha != null) ctx.globalAlpha = alpha; drawIc(ctx, k, 0, 0, size); ctx.restore(); }
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+const pc = p => p ? C2 : C1, pd = p => p ? C2d : C1d;
+
+/* ---------- match state ---------- */
+const M = { wins: [0, 0], target: 3, bt: 0, banner: null, over: false, running: false };
+let G = null, gi = -1, t = 0;
+function roundEnd(w, msg, delay) {
+  if (M.bt > 0 || M.over) return;
+  if (w >= 0) { M.wins[w]++; sfx.win(); } else sfx.lose();
+  M.banner = { w, msg }; M.bt = delay || 1.5;
+}
+function finish() {
+  M.over = true; M.running = false; sfx.fin();
+  const w = M.wins[0] > M.wins[1] ? 0 : 1, rec = JSON.parse(store.get('dd-rec', '{}')); const r = rec[G.id] || [0, 0]; r[w]++; rec[G.id] = r; store.set('dd-rec', JSON.stringify(rec));
+  $('oEmoji').innerHTML = ic('trophy'); $('oTitle').textContent = 'Player ' + (w + 1) + ' wins!'; $('oTitle').style.color = w ? C2d : C1d;
+  $('oScore').textContent = M.wins[0] + ' - ' + M.wins[1];
+  $('oRec').textContent = G.name + ' record: P1 ' + r[0] + ' - ' + r[1] + ' P2';
+  setTimeout(() => $('over').classList.remove('hidden'), 350);
+}
+
+/* ---------- shared drawing ---------- */
+function bg() {
+  let g = ctx.createLinearGradient(0, 0, 0, MID); g.addColorStop(0, '#ff7a2f'); g.addColorStop(1, '#ffb55c'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, MID);
+  g = ctx.createLinearGradient(0, MID, 0, H); g.addColorStop(0, '#5bb4ff'); g.addColorStop(1, '#2468d8'); ctx.fillStyle = g; ctx.fillRect(0, MID, W, MID);
+  ctx.fillStyle = 'rgba(255,255,255,.07)'; for (let i = 0; i < 8; i++) { ctx.beginPath(); ctx.arc((i * 97 + t * 8) % (W + 80) - 40, 80 + i * 110, 40 + (i % 3) * 14, 0, 6.283); ctx.fill(); }
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fillRect(0, MID - 3, W, 6);
+}
+function hud() {
+  for (let p = 0; p < 2; p++) side(p, () => {
+    const n = M.target, wid = n * 30, x0 = W / 2 - wid / 2 + 15;
+    txt('P' + (p + 1), x0 - 52, 928, 26, '#fff', { stroke: pd(p), sw: 7 });
+    for (let i = 0; i < n; i++) { ctx.beginPath(); ctx.arc(x0 + i * 30, 928, 11, 0, 6.283); ctx.fillStyle = i < M.wins[p] ? '#ffe066' : 'rgba(255,255,255,.35)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.stroke(); }
+  });
+}
+function banner() {
+  if (!M.banner) return; const b = M.banner, k = Math.min(1, (1.5 - M.bt) * 6 + .3);
+  for (let p = 0; p < 2; p++) side(p, () => {
+    ctx.save(); ctx.translate(W / 2, 560); ctx.scale(k, k); ctx.fillStyle = 'rgba(255,255,255,.96)'; rr(-190, -52, 380, 104, 32); ctx.fill();
+    ctx.restore();
+    const head = b.w < 0 ? 'Draw!' : (b.w === p ? 'You score!' : 'Player ' + (b.w + 1) + ' scores');
+    txt(head, W / 2, 545 + (1 - k) * 20, 38, b.w < 0 ? '#51647a' : pd(b.w), { alpha: k });
+    if (b.msg) txt(b.msg, W / 2, 584, 21, '#6f86a6', { alpha: k });
+  });
+}
+function panelBox(x, y, w, h, r, fill) { ctx.fillStyle = fill; rr(x, y, w, h, r); ctx.fill(); }
+
+/* ================= GAMES ================= */
+const GAMES = [];
+
+/* ---- Tug of War ---- */
+GAMES.push({
+  id: 'tug', name: 'Tug of War', emoji: 'rope', color: '#e8453c', target: 2, tag: 'Mash it!',
+  how: [['bolt', 'Mash your keys (or tap your half) as fast as you can'], ['flag', 'Pull the flag over your goal line'], ['trophy', 'First to win 2 rounds takes the match']],
+  pcP1: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> any key, fast', pcP2: 'Any <b>arrow</b> key, fast', touch: 'Tap your half',
+  round() { this.pos = 0; this.cd = 3.2; this.go = false; this.lastCd = 9; this.fx = []; },
+  update(dt) {
+    if (!this.go) { this.cd -= dt; const c = Math.ceil(this.cd - .2); if (c !== this.lastCd && c > 0) { this.lastCd = c; sfx.tick(); } if (this.cd <= .2) { this.go = true; sfx.go(); } }
+    this.fx.forEach(f => { f.l -= dt * 2.4; f.y += f.vy * dt; }); this.fx = this.fx.filter(f => f.l > 0);
+  },
+  pull(p) { if (!this.go || M.bt > 0) return; this.pos += (p ? -1 : 1) * .042; sfx.tap(p); this.fx.push({ x: 120 + Math.random() * 300, y: p ? 220 : 740, vy: p ? 120 : -120, l: 1, p }); if (Math.abs(this.pos) >= 1) { this.pos = clamp(this.pos, -1, 1); roundEnd(this.pos > 0 ? 0 : 1, 'What a pull!'); } },
+  key(p) { this.pull(p); }, down(p) { this.pull(p); },
+  draw() {
+    const y = MID + this.pos * 380;
+    ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.fillRect(0, 60, W, 70); ctx.fillRect(0, 830, W, 70);
+    ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(0, 100 - 2, W, 4); ctx.fillRect(0, 860 - 2, W, 4);
+    ctx.lineCap = 'round'; ctx.strokeStyle = '#7a4a22'; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(W / 2, 110); ctx.lineTo(W / 2, 850); ctx.stroke();
+    ctx.strokeStyle = '#b57a3c'; ctx.lineWidth = 8; ctx.setLineDash([12, 14]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(W / 2, MID, 8, 0, 6.283); ctx.fill();
+    ctx.save(); ctx.translate(W / 2, y); ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(0, 0, 40, 0, 6.283); ctx.fill(); ctx.stroke(); ctx.restore();
+    icn('flag', W / 2, y + 2, 54);
+    this.fx.forEach(f => { ctx.globalAlpha = Math.max(0, f.l); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(f.x, f.y, 10 * f.l + 3, 0, 6.283); ctx.fill(); }); ctx.globalAlpha = 1;
+    for (let p = 0; p < 2; p++) side(p, () => {
+      const k = this.go ? 1 + Math.sin(t * 9) * .05 : 1;
+      ctx.save(); ctx.translate(W / 2, 780); ctx.scale(k, k); ctx.fillStyle = 'rgba(255,255,255,.22)'; rr(-200, -62, 400, 124, 40); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.stroke(); ctx.restore();
+      txt(this.go ? (touchMode ? 'TAP FAST!' : (p ? 'MASH ARROWS!' : 'MASH WASD!')) : 'Get ready', W / 2, 780, 38, '#fff', { stroke: pd(p), sw: 8 });
+    });
+    if (!this.go && M.bt <= 0) { const c = Math.ceil(this.cd - .2); for (let p = 0; p < 2; p++) side(p, () => txt(c > 0 ? String(c) : '', W / 2, 600, 120, '#fff', { stroke: 'rgba(0,0,0,.3)', sw: 12 })); }
+  }
+});
+
+/* ---- Tic Tac Toe ---- */
+const BX = 45, BY = 255, CS = 150;
+GAMES.push({
+  id: 'ttt', name: 'Tic Tac Toe', emoji: 'cross', color: '#7b4fe0', target: 2, tag: 'Classic',
+  how: [['cross', 'Player 1 is X (blue), Player 2 is O (orange)'], ['target', 'Get three in a row to win the round'], ['trophy', 'First to win 2 rounds takes the match']],
+  pcP1: '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move, <kbd>Space</kbd> place', pcP2: '<b>Arrows</b> move, <kbd>Enter</kbd> place', touch: 'Tap a square on your turn',
+  start() { this.starter = 0; },
+  round() { this.b = Array(9).fill(-1); this.turn = this.starter; this.starter ^= 1; this.cur = [4, 4]; this.line = null; },
+  place(p, i) { if (M.bt > 0 || this.turn !== p || this.b[i] !== -1) return; this.b[i] = p; sfx.place(); const L = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]].find(l => l.every(k => this.b[k] === p)); if (L) { this.line = L; roundEnd(p, 'Three in a row!'); } else if (this.b.every(v => v !== -1)) roundEnd(-1, 'Board full'); else this.turn ^= 1; },
+  key(p, k) { let c = this.cur[p], x = c % 3, y = (c / 3) | 0; if (k === 'L') x = (x + 2) % 3; else if (k === 'R') x = (x + 1) % 3; else if (k === 'U') y = (y + 2) % 3; else if (k === 'D') y = (y + 1) % 3; else if (k === 'A') { this.place(p, c); return; } this.cur[p] = y * 3 + x; sfx.tap(p); },
+  down(p, x, y) { if (x < BX || x > BX + CS * 3 || y < BY || y > BY + CS * 3) return; this.place(this.turn, Math.floor((x - BX) / CS) + 3 * Math.floor((y - BY) / CS)); },
+  update() {},
+  draw() {
+    panelBox(BX - 14, BY - 14, CS * 3 + 28, CS * 3 + 28, 34, 'rgba(255,255,255,.95)');
+    ctx.strokeStyle = '#c9d6e6'; ctx.lineWidth = 8; ctx.lineCap = 'round'; ctx.beginPath(); for (let i = 1; i < 3; i++) { ctx.moveTo(BX + i * CS, BY + 10); ctx.lineTo(BX + i * CS, BY + CS * 3 - 10); ctx.moveTo(BX + 10, BY + i * CS); ctx.lineTo(BX + CS * 3 - 10, BY + i * CS); } ctx.stroke();
+    for (let p = 0; p < 2; p++) { const c = this.cur[p], cx = BX + (c % 3) * CS, cy = BY + ((c / 3) | 0) * CS; ctx.strokeStyle = pc(p); ctx.globalAlpha = this.turn === p && !touchMode ? .9 : 0; ctx.lineWidth = 6; rr(cx + 8 + p * 5, cy + 8 + p * 5, CS - 16 - p * 10, CS - 16 - p * 10, 18); ctx.stroke(); ctx.globalAlpha = 1; }
+    this.b.forEach((v, i) => { if (v < 0) return; const cx = BX + (i % 3) * CS + CS / 2, cy = BY + ((i / 3) | 0) * CS + CS / 2; ctx.lineWidth = 18; ctx.lineCap = 'round'; ctx.strokeStyle = pc(v);
+      if (v === 0) { ctx.beginPath(); ctx.moveTo(cx - 38, cy - 38); ctx.lineTo(cx + 38, cy + 38); ctx.moveTo(cx + 38, cy - 38); ctx.lineTo(cx - 38, cy + 38); ctx.stroke(); } else { ctx.beginPath(); ctx.arc(cx, cy, 40, 0, 6.283); ctx.stroke(); } });
+    if (this.line) { const a = this.line[0], c = this.line[2], f = i => [BX + (i % 3) * CS + CS / 2, BY + ((i / 3) | 0) * CS + CS / 2]; const [x1, y1] = f(a), [x2, y2] = f(c); ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 10; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+    for (let p = 0; p < 2; p++) side(p, () => {
+      const mine = this.turn === p && M.bt <= 0;
+      txt(mine ? 'YOUR TURN' : 'wait...', W / 2, 835, mine ? 40 : 26, '#fff', { stroke: mine ? pd(p) : null, sw: 8, alpha: mine ? 1 : .7 });
+      icn(p ? 'ring' : 'cross', W / 2, 890, 40);
+    });
+  }
+});
+
+/* ---- Connect 4 ---- */
+const CX = 25, CY = 285, CC = 70;
+GAMES.push({
+  id: 'c4', name: 'Connect 4', emoji: 'red', color: '#1ca37a', target: 2, tag: 'Drop & link',
+  how: [['down', 'Drop a disc into a column on your turn'], ['link', 'Link four in a row, any direction'], ['trophy', 'First to win 2 rounds takes the match']],
+  pcP1: '<kbd>A</kbd><kbd>D</kbd> move, <kbd>Space</kbd> drop', pcP2: '<b>Left/Right</b> move, <kbd>Enter</kbd> drop', touch: 'Tap a column on your turn',
+  start() { this.starter = 0; },
+  round() { this.g = Array(42).fill(-1); this.turn = this.starter; this.starter ^= 1; this.cur = [3, 3]; this.anim = null; this.win = null; },
+  drop(p, col) { if (M.bt > 0 || this.anim || this.turn !== p) return; let r = 5; while (r >= 0 && this.g[r * 7 + col] !== -1) r--; if (r < 0) return; this.anim = { col, r, y: CY - 50, vy: 0, p }; sfx.tap(p); },
+  key(p, k) { if (k === 'L') this.cur[p] = (this.cur[p] + 6) % 7; else if (k === 'R') this.cur[p] = (this.cur[p] + 1) % 7; else if (k === 'A' || k === 'D') { if (k === 'A' || this.turn === p) this.drop(p, this.cur[p]); return; } else return; sfx.tap(p); },
+  down(p, x, y) { if (x < CX || x > CX + CC * 7 || y < CY - 90 || y > CY + CC * 6 + 40) return; this.cur[this.turn] = Math.floor((x - CX) / CC); this.drop(this.turn, this.cur[this.turn]); },
+  check(r, c, p) { const g = this.g; for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]]) { const cells = [[r, c]]; for (const s of [1, -1]) { let rr_ = r + dr * s, cc = c + dc * s; while (rr_ >= 0 && rr_ < 6 && cc >= 0 && cc < 7 && g[rr_ * 7 + cc] === p) { cells.push([rr_, cc]); rr_ += dr * s; cc += dc * s; } } if (cells.length >= 4) return cells; } return null; },
+  update(dt) {
+    const a = this.anim; if (!a) return; a.vy += 2600 * dt; a.y += a.vy * dt; const ty = CY + a.r * CC + CC / 2;
+    if (a.y >= ty) { this.anim = null; this.g[a.r * 7 + a.col] = a.p; sfx.place(); const w = this.check(a.r, a.col, a.p); if (w) { this.win = w; roundEnd(a.p, 'Four in a row!'); } else if (this.g.every(v => v !== -1)) roundEnd(-1, 'Board full'); else this.turn ^= 1; }
+  },
+  draw() {
+    const disc = (x, y, p, hl) => { ctx.beginPath(); ctx.arc(x, y, CC / 2 - 6, 0, 6.283); ctx.fillStyle = pc(p); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = pd(p); ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.arc(x - 8, y - 9, 11, 0, 6.283); ctx.fill(); if (hl) { ctx.lineWidth = 6; ctx.strokeStyle = '#ffe066'; ctx.beginPath(); ctx.arc(x, y, CC / 2 - 2, 0, 6.283); ctx.stroke(); } };
+    const a = this.anim;
+    panelBox(CX - 10, CY - 10, CC * 7 + 20, CC * 6 + 20, 26, '#10213f');
+    for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) { const v = this.g[r * 7 + c]; if (v >= 0) disc(CX + c * CC + CC / 2, CY + r * CC + CC / 2, v); }
+    if (a) disc(CX + a.col * CC + CC / 2, a.y, a.p);
+    ctx.beginPath(); ctx.moveTo(CX - 10 + 26, CY - 10); ctx.arcTo(CX + CC * 7 + 10, CY - 10, CX + CC * 7 + 10, CY + CC * 6 + 10, 26); ctx.arcTo(CX + CC * 7 + 10, CY + CC * 6 + 10, CX - 10, CY + CC * 6 + 10, 26); ctx.arcTo(CX - 10, CY + CC * 6 + 10, CX - 10, CY - 10, 26); ctx.arcTo(CX - 10, CY - 10, CX + CC * 7 + 10, CY - 10, 26); ctx.closePath();
+    for (let r = 0; r < 6; r++) for (let c = 0; c < 7; c++) { ctx.moveTo(CX + c * CC + CC / 2 + CC / 2 - 6, CY + r * CC + CC / 2); ctx.arc(CX + c * CC + CC / 2, CY + r * CC + CC / 2, CC / 2 - 6, 0, 6.283); }
+    ctx.fillStyle = '#27406b'; ctx.fill('evenodd');
+    if (this.win) this.win.forEach(w => { ctx.lineWidth = 6; ctx.strokeStyle = '#ffe066'; ctx.beginPath(); ctx.arc(CX + w[1] * CC + CC / 2, CY + w[0] * CC + CC / 2, CC / 2 - 4, 0, 6.283); ctx.stroke(); });
+    if (!a && M.bt <= 0) { const p = this.turn, x = CX + this.cur[p] * CC + CC / 2; ctx.globalAlpha = .75; disc(x, CY - 38, p); ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(x - 10, CY - 2); ctx.lineTo(x + 10, CY - 2); ctx.lineTo(x, CY + 10); ctx.fill(); }
+    for (let p = 0; p < 2; p++) side(p, () => { const mine = this.turn === p && M.bt <= 0; txt(mine ? 'YOUR TURN' : 'wait...', W / 2, 835, mine ? 40 : 26, '#fff', { stroke: mine ? pd(p) : null, sw: 8, alpha: mine ? 1 : .7 }); });
+  }
+});
+
+/* ---- Rock Paper Scissors ---- */
+const RPS = ['rock', 'paper', 'scissors'], RN = ['Rock', 'Paper', 'Scissors'];
+GAMES.push({
+  id: 'rps', name: 'Rock Paper Scissors', emoji: 'scissors', color: '#e0559c', target: 3, tag: 'Secret pick',
+  how: [['lock', 'Both players pick in secret at the same time'], ['eyes', 'Picks are revealed together'], ['trophy', 'First to win 3 rounds takes the match']],
+  pcP1: '<kbd>A</kbd> ' + ic('rock') + ' &nbsp;<kbd>S</kbd> ' + ic('paper') + ' &nbsp;<kbd>D</kbd> ' + ic('scissors') + '', pcP2: '<b>←</b> ' + ic('rock') + ' &nbsp;<b>↓</b> ' + ic('paper') + ' &nbsp;<b>→</b> ' + ic('scissors') + '', touch: 'Tap your own buttons',
+  round() { this.pick = [null, null]; this.rev = 0; },
+  choose(p, i) { if (M.bt > 0 || this.rev > 0 || this.pick[p] !== null) return; this.pick[p] = i; sfx.tap(p); if (this.pick[0] !== null && this.pick[1] !== null) this.rev = 1.1; },
+  key(p, k) { const i = { L: 0, D: 1, R: 2 }[k]; if (i != null) this.choose(p, i); },
+  down(p, x, y, lx, ly) { for (let i = 0; i < 3; i++) if (Math.hypot(lx - (95 + i * 175), ly - 800) < 78) this.choose(p, i); },
+  update(dt) {
+    if (this.rev > 0) { this.rev -= dt; if (this.rev <= 0) { this.rev = -1; const a = this.pick[0], b = this.pick[1]; if (a === b) roundEnd(-1, 'Both chose ' + RN[a]); else { const w = (a - b + 3) % 3 === 1 ? 0 : 1; roundEnd(w, RN[this.pick[w]] + ' beats ' + RN[this.pick[1 - w]]); } } }
+  },
+  draw() {
+    const shown = this.rev !== 0;
+    for (let p = 0; p < 2; p++) side(p, () => {
+      for (let i = 0; i < 3; i++) {
+        const x = 95 + i * 175, sel = this.pick[p] === i;
+        ctx.save(); ctx.translate(x, 800); ctx.scale(sel ? 1.08 : 1, sel ? 1.08 : 1); ctx.fillStyle = sel ? '#fff' : 'rgba(255,255,255,.28)'; ctx.beginPath(); ctx.arc(0, 0, 76, 0, 6.283); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = sel ? pd(p) : 'rgba(255,255,255,.7)'; ctx.stroke(); ctx.restore();
+        icn(RPS[i], x, 800, 84, this.pick[p] !== null && !sel ? .35 : 1);
+        if (!touchMode) txt(p ? ['←', '↓', '→'][i] : ['A', 'S', 'D'][i], x, 722, 24, '#fff', { stroke: pd(p), sw: 6 });
+      }
+      if (!shown) txt(this.pick[p] === null ? 'Pick one!' : 'Locked in!', W / 2, 650, 34, '#fff', { stroke: pd(p), sw: 8 });
+    });
+    if (shown) for (let p = 0; p < 2; p++) side(p, () => { ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.beginPath(); ctx.arc(W / 2, 668, 52, 0, 6.283); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = pd(p); ctx.stroke(); icn(RPS[this.pick[p]], W / 2, 670, 72); });
+  }
+});
+
+/* ---- Reaction Duel ---- */
+GAMES.push({
+  id: 'react', name: 'Quick Draw', emoji: 'bolt', color: '#f0a30a', target: 3, tag: 'Reflexes',
+  how: [['red', 'Wait while the circle is red'], ['green', 'The instant it turns green, hit your button!'], ['ban', 'Too early and you lose the round']],
+  pcP1: 'Any <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> key', pcP2: 'Any <b>arrow</b> key', touch: 'Tap your half',
+  round() { this.st = 'wait'; this.w = 1.4 + Math.random() * 2.8; this.rt = 0; },
+  hit(p) { if (M.bt > 0) return; if (this.st === 'wait') roundEnd(1 - p, 'Player ' + (p + 1) + ' jumped the gun!'); else roundEnd(p, Math.round(this.rt * 1000) + ' ms'); },
+  key(p) { this.hit(p); }, down(p) { this.hit(p); },
+  update(dt) { if (M.bt > 0) return; if (this.st === 'wait') { this.w -= dt; if (this.w <= 0) { this.st = 'go'; sfx.go(); } } else this.rt += dt; },
+  draw() {
+    const go = this.st === 'go', pulse = go ? 1 + Math.sin(t * 20) * .04 : 1;
+    ctx.save(); ctx.translate(W / 2, MID); ctx.scale(pulse, pulse); ctx.fillStyle = go ? '#2fd673' : '#e8453c'; ctx.beginPath(); ctx.arc(0, 0, 150, 0, 6.283); ctx.fill(); ctx.lineWidth = 12; ctx.strokeStyle = '#fff'; ctx.stroke(); ctx.restore();
+    for (let p = 0; p < 2; p++) side(p, () => txt(go ? 'GO!' : 'WAIT', W / 2, MID + 4 - (p ? 0 : 0), 64, '#fff', { stroke: 'rgba(0,0,0,.25)', sw: 10 }));
+    for (let p = 0; p < 2; p++) side(p, () => {
+      ctx.fillStyle = 'rgba(255,255,255,.22)'; rr(60, 730, 420, 120, 36); ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.stroke();
+      txt(touchMode ? 'TAP' : (p ? 'ANY ARROW' : 'ANY WASD KEY'), W / 2, 790, 34, '#fff', { stroke: pd(p), sw: 8 });
+    });
+  }
+});
+
+/* ---- Pong ---- */
+GAMES.push({
+  id: 'pong', name: 'Pong', emoji: 'paddle', color: '#2e9bd6', target: 5, tag: 'First to 5',
+  how: [['paddle', 'Bounce the ball past your opponent'], ['bolt', 'The ball speeds up every hit'], ['trophy', 'First to 5 points wins']],
+  pcP1: '<kbd>A</kbd> / <kbd>D</kbd> slide the paddle', pcP2: '<b>←</b> / <b>→</b> slide the paddle', touch: 'Drag your finger on your half',
+  start() { this.px = [W / 2, W / 2]; this.tx = [null, null]; this.serve = 0; },
+  round() { this.px = [W / 2, W / 2]; this.tx = [null, null]; const d = this.serve; this.serve ^= 1; this.ball = { x: W / 2, y: MID, vx: 0, vy: 0, sp: 400 }; this.cd = 1.1; this.dir = d ? -1 : 1; this.trail = []; },
+  key() {},
+  down(p, x) { this.tx[p] = x; }, move(p, x) { this.tx[p] = x; },
+  update(dt) {
+    const PW = 62, spd = 560;
+    for (let p = 0; p < 2; p++) {
+      if (held[p].L && !held[p].R) { this.px[p] -= spd * dt; this.tx[p] = null; } else if (held[p].R && !held[p].L) { this.px[p] += spd * dt; this.tx[p] = null; }
+      else if (this.tx[p] != null) { const d = this.tx[p] - this.px[p], s = 1500 * dt; this.px[p] += Math.abs(d) < s ? d : Math.sign(d) * s; }
+      this.px[p] = clamp(this.px[p], PW + 8, W - PW - 8);
+    }
+    if (M.bt > 0) return; const b = this.ball;
+    if (this.cd > 0) { this.cd -= dt; if (this.cd <= 0) { const a = (Math.random() - .5) * 1.0; b.vx = Math.sin(a) * b.sp; b.vy = Math.cos(a) * b.sp * this.dir; } return; }
+    b.x += b.vx * dt; b.y += b.vy * dt; this.trail.push([b.x, b.y]); if (this.trail.length > 10) this.trail.shift();
+    if (b.x < 14) { b.x = 14; b.vx = Math.abs(b.vx); sfx.bounce(); } else if (b.x > W - 14) { b.x = W - 14; b.vx = -Math.abs(b.vx); sfx.bounce(); }
+    const py = [900, 60];
+    for (let p = 0; p < 2; p++) {
+      const hitY = py[p]; if ((p === 0 && b.vy > 0 && b.y + 14 >= hitY - 10 && b.y < hitY + 14) || (p === 1 && b.vy < 0 && b.y - 14 <= hitY + 10 && b.y > hitY - 14)) {
+        if (Math.abs(b.x - this.px[p]) <= PW + 14) { const o = clamp((b.x - this.px[p]) / (PW + 14), -1, 1); b.sp = Math.min(900, b.sp * 1.06 + 8); const a = o * 1.0; b.vx = Math.sin(a) * b.sp; b.vy = -Math.cos(a) * b.sp * (p === 0 ? 1 : -1); b.y = p === 0 ? hitY - 24 : hitY + 24; sfx.bounce(); sfx.tap(p); }
+      }
+    }
+    if (b.y > H + 20) roundEnd(1, null, 1), this.dir = 1; else if (b.y < -20) roundEnd(0, null, 1), this.dir = -1;
+  },
+  draw() {
+    ctx.setLineDash([16, 14]); ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, MID); ctx.lineTo(W, MID); ctx.stroke(); ctx.setLineDash([]);
+    for (let p = 0; p < 2; p++) { const y = p ? 60 : 900; ctx.fillStyle = '#fff'; rr(this.px[p] - 62, y - 10, 124, 20, 10); ctx.fill(); ctx.fillStyle = pc(p); rr(this.px[p] - 62, y + (p ? 0 : -10), 124, 10, 5); ctx.fill(); }
+    const b = this.ball; if (!b) return;
+    this.trail.forEach((q, i) => { ctx.globalAlpha = i / 25; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(q[0], q[1], 10, 0, 6.283); ctx.fill(); }); ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(b.x, b.y, 14, 0, 6.283); ctx.fill(); ctx.stroke();
+    if (this.cd > 0 && M.bt <= 0) for (let p = 0; p < 2; p++) side(p, () => txt('Ready...', W / 2, 640, 36, '#fff', { stroke: 'rgba(0,0,0,.25)', sw: 8 }));
+  }
+});
+
+/* ================= flow ================= */
+function drawAll() {
+  bg(); if (G && M.running) { G.draw(); hud(); banner(); }
+}
+function tick(dt) {
+  if (M.bt > 0) { M.bt -= dt; if (M.bt > 0) G.update(dt); else { M.banner = null; if (M.wins[0] >= M.target || M.wins[1] >= M.target) finish(); else G.round(); } }
+  else G.update(dt);
+}
+let last = 0;
+function loop(ts) {
+  const dt = Math.min(.05, (ts - last) / 1000 || 0); last = ts; t += dt;
+  if (G && M.running) {
+    tick(dt);
+  }
+  drawAll(); requestAnimationFrame(loop);
+}
+
+function toMenu() { M.running = false; document.body.className = ''; ['tut', 'over'].forEach(i => $(i).classList.add('hidden')); buildMenu(); $('menu').classList.remove('hidden'); }
+function buildMenu() {
+  const rec = JSON.parse(store.get('dd-rec', '{}'));
+  $('grid').innerHTML = GAMES.map((g, i) => { const r = rec[g.id]; return `<button class="g" data-i="${i}" style="background:${g.color};box-shadow:0 5px 0 rgba(0,0,0,.25)"><i>${ic(g.emoji)}</i><b>${g.name}</b><small>${r ? 'P1 ' + r[0] + ' - ' + r[1] + ' P2' : g.tag}</small></button>`; }).join('');
+}
+function showTut(i) {
+  gi = i; const g = GAMES[i]; $('menu').classList.add('hidden'); $('over').classList.add('hidden');
+  $('tEmoji').innerHTML = ic(g.emoji); $('tName').textContent = g.name;
+  $('tHow').innerHTML = g.how.map(h => `<div><i>${ic(h[0])}</i><span>${h[1]}</span></div>`).join('');
+  $('tCtrl').innerHTML = `<div class="a"><b>Player 1 (blue)</b><br>PC: ${g.pcP1}<br>Phone: ${g.touch}</div><div class="b"><b>Player 2 (orange)</b><br>PC: ${g.pcP2}<br>Phone: ${g.touch}</div>`;
+  $('tut').classList.remove('hidden');
+}
+function startMatch() {
+  G = GAMES[gi]; M.wins = [0, 0]; M.target = G.target; M.bt = 0; M.banner = null; M.over = false; if (G.start) G.start(); G.round(); M.running = true;
+  document.body.className = 'play'; try { document.activeElement.blur(); } catch (_) {} $('tut').classList.add('hidden'); $('over').classList.add('hidden');
+}
+$('grid').addEventListener('click', e => { const b = e.target.closest('.g'); if (b) showTut(+b.dataset.i); });
+$('tGo').onclick = startMatch; $('tBack').onclick = toMenu;
+$('oAgain').onclick = () => showTut(gi); $('oMenu').onclick = toMenu; $('home').onclick = toMenu;
+
+/* ---------- input ---------- */
+const tp = {};   // pointerId -> player
+function pt(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale }; }
+function loc(p, x, y) { return p ? [W - x, H - y] : [x, y]; }
+cv.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') touchMode = true; if (!M.running || !G.down) return; const { x, y } = pt(e), p = y < MID ? 1 : 0; tp[e.pointerId] = p; const l = loc(p, x, y);
+  try { cv.setPointerCapture(e.pointerId); } catch (_) {} G.down(p, x, y, l[0], l[1]);
+});
+cv.addEventListener('pointermove', e => { if (!M.running || !G.move) return; if (e.pointerType === 'mouse' && !(e.buttons & 1)) return; const p = tp[e.pointerId]; if (p == null) return; const { x, y } = pt(e); G.move(p, x, y); });
+const pup = e => { delete tp[e.pointerId]; }; cv.addEventListener('pointerup', pup); cv.addEventListener('pointercancel', pup);
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') { toMenu(); return; }
+  const k = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key]; if (!k) return;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '].includes(e.key)) e.preventDefault();
+  touchMode = false; held[k[0]][k[1]] = true; if (e.repeat || !M.running || !G.key) return; G.key(k[0], k[1]);
+});
+addEventListener('keyup', e => { const k = KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key]; if (k) held[k[0]][k[1]] = false; });
+addEventListener('blur', () => { held[0] = {}; held[1] = {}; });
+
+window.__dd = { show: showTut, start: startMatch, G: () => G, M, press: (p, k) => G.key(p, k), tap: (p, x, y) => { const l = loc(p, x, y); G.down(p, x, y, l[0], l[1]); }, step: tick };
+buildMenu(); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
