@@ -20,6 +20,9 @@
 <meta name="twitter:title" content="PlayPop - Play Free Games">
 <meta name="twitter:description" content="Free games for everyone. Play right in your browser, no download needed.">
 <meta name="twitter:image" content="https://layahmcfly.github.io/PlayPop/og-image.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
 <meta id="themeColor" name="theme-color" content="#0a3a8f">
 <link id="favicon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%231b6df0'/%3E%3Cpath d='M16 24h32a8 8 0 0 1 8 8v6a6 6 0 0 1-10 4l-4-4H22l-4 4a6 6 0 0 1-10-4v-6a8 8 0 0 1 8-8z' fill='%23fff'/%3E%3Cpath d='M20 28v8M16 32h8' stroke='%23ff8a1e' stroke-width='3' stroke-linecap='round'/%3E%3Ccircle cx='42' cy='30' r='3' fill='%23ff8a1e'/%3E%3Ccircle cx='48' cy='34' r='3' fill='%23ff8a1e'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -290,7 +293,6 @@ h2.sub { font-size: 1.25rem; font-weight: 800; margin: 38px 0 14px; }
 @media (hover: none) { .name { transform: none; } }
 
 footer { padding: 10px 34px 40px 104px; color: var(--muted); font-size: .85rem; font-weight: 500; }
-.ver { display: inline-block; margin: 0 6px 0 2px; padding: 2px 9px; border-radius: 999px; background: rgba(127,127,127,.16); font-weight: 800; font-size: .78rem; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 
 
 /* ================= FEEDBACK / GAME REQUEST ================= */
@@ -323,6 +325,26 @@ header .fbk ~ #openSettings { margin-left: 0 !important; }
 @media (max-width: 760px) { footer { padding-left: 20px !important; } .dl { margin: 10px 0 0; display: flex; width: max-content; } }
 
 /* ================= SETTINGS MODAL ================= */
+/* ===== ads (sample boxes until AdSense is switched on), version, update bar ===== */
+.ad { position: relative; border: 3px dashed rgba(130,130,170,.7); border-radius: 16px; color: var(--fg); background: repeating-linear-gradient(135deg, rgba(130,130,170,.10) 0 10px, rgba(130,130,170,.20) 10px 20px); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 6px 12px; overflow: hidden; }
+.ad b { background: #ffd23f; color: #3a2b00; font-size: .7rem; padding: 2px 9px; border-radius: 6px; letter-spacing: .1em; }
+.ad span { font-size: .78rem; margin-top: 5px; font-weight: 700; opacity: .9; line-height: 1.25; }
+.adslot:empty { display: none; }
+.ad-banner, .ad-footer, .ad-game { width: min(100%, 728px); height: 90px; margin: 14px 0; }
+.ad-tile { grid-column: span 2; grid-row: span 2; }
+ins.adsbygoogle.ad-tile { display: block; }
+@media (max-width: 760px) { .ad-banner, .ad-footer, .ad-game { height: 60px; } .ad span { font-size: .7rem; } }
+.ver { display: inline-block; margin-left: 12px; font-weight: 800; font-size: .8rem; background: var(--panel); color: var(--fg); padding: 5px 11px; border-radius: 999px; vertical-align: middle; }
+.linkbtn { background: none; color: inherit; text-decoration: underline; font: inherit; font-weight: 700; margin-left: 12px; cursor: pointer; }
+.updbar { position: fixed; left: 50%; bottom: 16px; transform: translate(-50%, 140%); z-index: 140; width: min(94vw, 460px); background: #fff; color: #2b2b3a; border-radius: 20px; padding: 14px 16px; box-shadow: 0 14px 40px rgba(0,0,30,.4); display: flex; align-items: center; gap: 12px; transition: transform .45s cubic-bezier(.3,1.5,.5,1); }
+.updbar.show { transform: translate(-50%, 0); }
+.updbar .t { flex: 1; min-width: 0; font-size: .88rem; font-weight: 700; line-height: 1.3; } .updbar .t small { display: block; font-weight: 600; opacity: .7; margin-top: 2px; }
+.updbar button { height: 38px; padding: 0 16px; border-radius: 999px; font-weight: 800; font-size: .85rem; background: var(--accent); color: #fff; flex: none; }
+.updbar button.later { background: #eceaf8; color: #3a3860; }
+.inter .modal { text-align: center; }
+.inter .ad { width: 100%; height: 220px; margin: 14px 0; }
+.inter .btn[disabled] { opacity: .5; pointer-events: none; }
+.priv h3 { font-size: 1rem; margin: 14px 0 4px; } .priv p { font-size: .88rem; margin: 0 0 6px; line-height: 1.45; }
 .overlay { position: fixed; inset: 0; z-index: 120; display: none; place-items: center; background: rgba(5, 15, 45, .6); }
 .overlay.open { display: grid; animation: fade .2s; }
 @keyframes fade { from { opacity: 0; } }
@@ -478,7 +500,7 @@ html.fx-on header { background: color-mix(in srgb, var(--bg) 72%, transparent); 
   .logo { width: auto; font-size: 1.45rem; }
   .search { min-width: 0; }
   .search input { padding-left: 40px; padding-right: 8px; min-width: 0; width: 100%; }
-  .search input::placeholder { color: transparent; }
+  .search input { font-size: .85rem; } .search input::placeholder { opacity: .6; }
   .search svg { left: 12px; }
   .net { padding: 0 11px; gap: 6px; height: 42px; }
   .net #netLab { display: none; }
@@ -527,7 +549,7 @@ html.cur-on iframe { cursor: auto !important; }
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
     <input id="q" type="search" placeholder="Search for games" autocomplete="off">
   </label>
-  <button class="fbk" id="fbkBtn" aria-label="Request a game" title="Request a game"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.6A8 8 0 1 1 21 12z"/><path d="M12 8.5v5M9.5 11h5"/></svg><span class="fbkLab">Request a game</span></button>
+  <button class="fbk" id="fbkBtn" aria-label="Request a game" title="Request a game"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="fbkLab">Request a game</span></button>
   <button class="net" id="netBtn" aria-pressed="false" title="Online mode shows online games too"><svg class="globe" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><span class="sw"></span><span id="netLab">Offline</span></button>
   <button class="round-btn" id="openSettings" aria-label="Settings" title="Settings">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></svg>
@@ -539,6 +561,7 @@ html.cur-on iframe { cursor: auto !important; }
   <main>
     <h1 class="head" id="head">What are you playing today?</h1>
     <div class="chips" id="chips"></div>
+    <div class="adslot" id="adTop"></div>
     <div class="mosaic" id="mosaic"></div>
     <div id="catSection">
       <h2 class="sub">Play by category</h2>
@@ -546,7 +569,7 @@ html.cur-on iframe { cursor: auto !important; }
     </div>
   </main>
 </div>
-<footer>&copy; <span id="yr"></span> PlayPop. Let the world play. <span class="ver" title="PlayPop version: goes up by one with every change">v1.0.0</span> <button class="dl" id="dlBtn" type="button" title="Download the whole website as a PlayPop folder (zip)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>Download PlayPop</button></footer>
+<footer>&copy; <span id="yr"></span> PlayPop. Let the world play. <button class="dl" id="dlBtn" type="button" title="Download the whole website as a PlayPop folder (zip)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>Download PlayPop</button><span class="ver" id="verTag" title="Version of PlayPop on this device"></span><button class="linkbtn" id="privBtn" type="button">Privacy</button><div class="adslot" id="adFoot"></div></footer>
 
 <!-- Settings -->
 <div class="overlay" id="settings">
@@ -581,6 +604,21 @@ html.cur-on iframe { cursor: auto !important; }
     <button class="btn" id="closeSettings">Done</button>
   </div>
 </div>
+
+<!-- Privacy -->
+<div class="overlay" id="privacy"><div class="modal priv">
+  <h2>Privacy</h2>
+  <h3>What PlayPop stores</h3><p>Your favorites, settings, saved songs and game progress stay on your own device. PlayPop has no accounts.</p>
+  <h3>Ads</h3><p>PlayPop may show ads from Google AdSense. Google can use cookies to show ads. You can manage ad choices at adssettings.google.com.</p>
+  <h3>Requests</h3><p>If you send a game request, the game name, link and any file you attach are emailed to the PlayPop owner.</p>
+  <button class="btn" id="closePrivacy" style="margin-top:12px">Done</button>
+</div></div>
+<div class="overlay inter" id="adInter"><div class="modal">
+  <h2>Ad break</h2>
+  <div id="adInterBox"></div>
+  <button class="btn" id="adInterGo" disabled>Wait 3...</button>
+</div></div>
+<div class="updbar" id="updBar" role="status"><div class="t" id="updTxt"></div><button class="later" id="updLater">Later</button><button id="updNow">Update</button></div>
 
 <!-- Request a game -->
 <div class="overlay" id="feedback">
@@ -628,6 +666,7 @@ html.cur-on iframe { cursor: auto !important; }
   <div class="gv-body">
     <div>
       <div class="frame" id="frame"></div>
+      <div class="adslot" id="adGame"></div>
       <div class="gv-info"><h3 id="gvName"></h3><span class="pill" id="gvCat"></span><span class="fav" id="gvFav" role="button" tabindex="0" aria-label="Favorite" title="Favorite"></span></div>
       <div class="gv-note" id="gvNote"><span>This game is hosted on another site. If it doesn't show up here, open it in a new tab.</span><a id="gvOpen" target="_blank" rel="noopener noreferrer">Open in new tab</a></div>
     </div>
@@ -13969,6 +14008,36 @@ function renderChips() {
   $('#chips').innerHTML = `<button class="chip ${active === 'fav' ? 'active' : ''}" data-id="fav">${ico('fav')}Favorites</button>` + CATEGORIES.map(c =>
     `<button class="chip ${c.id === active ? 'active' : ''}" data-id="${c.id}">${ico(c.id)}${c.label} Games</button>`).join('');
 }
+/* ---------- ads ----------
+   ADS.mode: 'sample' shows labeled boxes where ads will go (no Google code runs),
+             'live'   shows real Google AdSense ads (fill in client and the slot ids first),
+             'off'    shows nothing. */
+const ADS = {
+  mode: 'sample',
+  client: '',                       /* your AdSense publisher id, looks like ca-pub-1234567890123456 */
+  slots: { banner: '', tile: '', footer: '', game: '' }   /* ad unit ids from AdSense (numbers) */
+};
+const AD_LABEL = { banner: 'Banner ad (728×90 on computers, 320×50 on phones)', footer: 'Footer ad (same banner size)', game: 'Game page ad. Sits under the game, never on top of it.' };
+let adGameCount = 0, adScript = false;
+const adLive = () => ADS.mode === 'live' && /^ca-pub-\d+$/.test(ADS.client);
+function adHTML(kind, label) {
+  if (ADS.mode === 'off') return '';
+  if (adLive()) return `<ins class="adsbygoogle ad-${kind}" style="display:block" data-ad-client="${ADS.client}" data-ad-slot="${ADS.slots[kind] || ''}" data-ad-format="auto" data-full-width-responsive="true"></ins>`;
+  if (ADS.mode === 'live') return '';
+  return `<div class="ad ad-${kind}"><b>AD</b><span>Sample. ${label || AD_LABEL[kind] || ''}</span></div>`;
+}
+function fillAd(sel, kind) { const el = $(sel); if (!el || el.firstChild) return; el.innerHTML = adHTML(kind); adsGo(el); }
+function adsGo(root) {
+  if (!adLive() || !root) return;
+  if (!adScript) { adScript = true; window.adsbygoogle = window.adsbygoogle || []; window.adsbygoogle.requestNonPersonalizedAds = 1; const sc = document.createElement('script'); sc.async = true; sc.crossOrigin = 'anonymous'; sc.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + ADS.client; document.head.appendChild(sc); }
+  root.querySelectorAll('ins.adsbygoogle:not([data-adsbygoogle-status])').forEach(() => { try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {} });
+}
+function showInterstitial(done) {
+  const ov = $('#adInter'), go = $('#adInterGo'); $('#adInterBox').innerHTML = `<div class="ad"><b>AD</b><span>Sample. A full-screen ad can show between games (every few games). Skippable after a few seconds.</span></div>`;
+  let n = 3; go.disabled = true; go.textContent = 'Wait ' + n + '...'; ov.classList.add('open');
+  const t = setInterval(() => { n--; if (n > 0) go.textContent = 'Wait ' + n + '...'; else { clearInterval(t); go.disabled = false; go.textContent = 'Continue to the game'; } }, 1000);
+  go.onclick = () => { clearInterval(t); ov.classList.remove('open'); done(); };
+}
 function renderMain() {
   const list = GAMES.map((g, i) => ({ g, i })).filter(({ g }) => matches(g, active) && g.title.toLowerCase().includes(query.toLowerCase()));
   list.sort((a, b) => shuf.pos.get(a.i) - shuf.pos.get(b.i));
@@ -13978,10 +14047,13 @@ function renderMain() {
   $('#head').innerHTML = query ? `Results for "${query.replace(/</g, '&lt;')}"<span class="count">${list.length} ${list.length === 1 ? 'game' : 'games'}</span>`
     : active === 'all' ? 'What are you playing today?'
     : `${all.label}${/^(new|hot)$/.test(active) ? ' Games' : ' Games'}<span class="count">${list.length} ${list.length === 1 ? 'game' : 'games'}</span>`;
-  $('#mosaic').innerHTML = list.length ? list.map(({ g, i }) => tileHTML({ ...g, size: shuf.size[i] }, i)).join('')
+  const tiles = list.map(({ g, i }) => tileHTML({ ...g, size: shuf.size[i] }, i));
+  if (ADS.mode !== 'off') for (let k = 7; k < tiles.length; k += 12) tiles.splice(k, 0, adHTML('tile', 'In-feed ad. It sits between the game tiles (about 300×250).'));
+  $('#mosaic').innerHTML = list.length ? tiles.join('')
     : active === 'fav' && !query ? `<div class="empty"><span class="sticker">⭐</span>No favorites yet. Tap the star on any game to save it here!</div>`
     : `<div class="empty"><span class="sticker">😢</span>No games found. Try another search!</div>`;
   $('#catSection').style.display = home ? '' : 'none';
+  fillAd('#adTop', 'banner'); fillAd('#adFoot', 'footer'); adsGo($('#mosaic'));
   renderSide(); renderChips(); requestAnimationFrame(updateScrollbar);
 }
 function renderCatGrid() {
@@ -14002,8 +14074,13 @@ $('#logo').onclick = () => go('all');
 
 /* ---------- game view ---------- */
 function openGame(i) {
+  adGameCount++;
+  if (ADS.mode === 'sample' && (adGameCount === 1 || adGameCount % 3 === 0)) { showInterstitial(() => openGameNow(i)); return; }
+  openGameNow(i);
+}
+function openGameNow(i) {
   const g = GAMES[i], c = CATEGORIES.find(c => c.id === g.cat);
-  Music.gameOpen(g);
+  Music.gameOpen(g); fillAd('#adGame', 'game');
   const gf = $('#gvFav'); gf.innerHTML = FAV_SVG; gf.dataset.t = g.title; gf.classList.toggle('on', favs.has(g.title));
   $('#gvTitle').textContent = g.title; $('#gvName').textContent = g.title; $('#gvCat').textContent = c ? c.label : '';
   $('#gvNote').classList.toggle('show', !!(g.online && g.url)); if (g.online && g.url) $('#gvOpen').href = g.url;
@@ -14150,6 +14227,34 @@ async function downloadSite() {
 }
 $('#dlBtn').onclick = downloadSite; $('#dlBtn2').onclick = downloadSite;
 
+/* ---------- version + update notice ---------- */
+const APP_VERSION = '1.0.1';   /* change this AND version.json every time you publish an update */
+$('#verTag').textContent = 'v' + APP_VERSION;
+const verCmp = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
+let updSkip = '';
+function showUpd(j) {
+  $('#updTxt').innerHTML = `A new version of PlayPop is ready (v${String(j.version).replace(/[<>&]/g, '')}).<small>${j.notes ? String(j.notes).replace(/[<>&]/g, '') : 'Update to get the newest games and fixes.'}</small>`;
+  $('#updBar').classList.add('show'); $('#updNow').dataset.v = j.version;
+}
+async function checkUpdate() {
+  try {
+    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' }); if (!r.ok) return;
+    const j = await r.json(); if (j && j.version && verCmp(j.version, APP_VERSION) > 0 && updSkip !== j.version) showUpd(j);
+  } catch (e) {}
+}
+$('#updLater').onclick = () => { updSkip = $('#updNow').dataset.v || ''; $('#updBar').classList.remove('show'); };
+$('#updNow').onclick = async () => {
+  $('#updNow').textContent = 'Updating...';
+  try { if ('caches' in window) for (const k of await caches.keys()) await caches.delete(k); if (navigator.serviceWorker) for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister(); } catch (e) {}
+  location.reload();
+};
+setTimeout(checkUpdate, 2500); setInterval(checkUpdate, 20 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+{ const mq = matchMedia('(max-width: 760px)'), fitPh = () => { $('#q').placeholder = mq.matches ? 'Search' : 'Search for games'; }; fitPh(); (mq.addEventListener ? mq.addEventListener('change', fitPh) : mq.addListener(fitPh)); }
+$('#privBtn').onclick = () => $('#privacy').classList.add('open');
+$('#closePrivacy').onclick = () => $('#privacy').classList.remove('open');
+$('#privacy').addEventListener('click', e => { if (e.target.id === 'privacy') e.target.classList.remove('open'); });
+
 /* ---------- offline mode (service worker) ---------- */
 const offSt = $('#offSt'), offBtn = $('#offBtn');
 const canSW = 'serviceWorker' in navigator && /^https?:$/.test(location.protocol);
@@ -14173,7 +14278,7 @@ offBtn.onclick = async () => {
   offBtn.disabled = false;
 };
 offCheck();
-if (canSW && store.get('pp-offline', '0') === '1') navigator.serviceWorker.register('sw.js').catch(() => {});
+if (canSW) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 /* ---------- background music (Jamendo, needs internet) ---------- */
 const Music = (() => {
