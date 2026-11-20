@@ -323,6 +323,15 @@ header .fbk ~ #openSettings { margin-left: 0 !important; }
 .dl { margin-left: 14px; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 999px; font-weight: 800; font-size: .82rem; background: var(--panel); color: var(--fg); vertical-align: middle; transition: transform .15s; }
 .dl:hover { transform: scale(1.06); } .dl.busy { opacity: .6; pointer-events: none; }
 @media (max-width: 760px) { footer { padding-left: 20px !important; } .dl { margin: 10px 0 0; display: flex; width: max-content; } }
+@media (max-width: 760px) {
+  footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 10px; padding: 14px 16px 34px !important; }
+  footer .copy { flex-basis: 100%; }
+  footer .dl, footer .ver, footer .linkbtn { margin: 0 !important; }
+  footer .dl { display: inline-flex; width: auto; }
+  footer .linkbtn { padding: 0 6px; }
+  footer .adslot { flex-basis: 100%; }
+  footer .ad-footer { width: 100%; margin: 6px 0 0; }
+}
 
 /* ================= SETTINGS MODAL ================= */
 /* ===== ads (sample boxes until AdSense is switched on), version, update bar ===== */
@@ -569,7 +578,7 @@ html.cur-on iframe { cursor: auto !important; }
     </div>
   </main>
 </div>
-<footer>&copy; <span id="yr"></span> PlayPop. Let the world play. <button class="dl" id="dlBtn" type="button" title="Download the whole website as a PlayPop folder (zip)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>Download PlayPop</button><span class="ver" id="verTag" title="Version of PlayPop on this device"></span><button class="linkbtn" id="privBtn" type="button">Privacy</button><div class="adslot" id="adFoot"></div></footer>
+<footer><span class="copy">&copy; <span id="yr"></span> PlayPop. Let the world play.</span> <button class="dl" id="dlBtn" type="button" title="Download the whole website as a PlayPop folder (zip)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg>Download PlayPop</button><span class="ver" id="verTag" title="Version of PlayPop on this device"></span><button class="linkbtn" id="privBtn" type="button">Privacy</button><div class="adslot" id="adFoot"></div></footer>
 
 <!-- Settings -->
 <div class="overlay" id="settings">
@@ -14228,7 +14237,7 @@ async function downloadSite() {
 $('#dlBtn').onclick = downloadSite; $('#dlBtn2').onclick = downloadSite;
 
 /* ---------- version + update notice ---------- */
-const APP_VERSION = '1.0.1';   /* change this AND version.json every time you publish an update */
+const APP_VERSION = '1.0.2';   /* change this AND version.json every time you publish an update */
 $('#verTag').textContent = 'v' + APP_VERSION;
 const verCmp = (a, b) => { const x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (let i = 0; i < 3; i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; };
 let updSkip = '';
